@@ -20,7 +20,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
         }
         h1 {
@@ -59,12 +59,16 @@
         }
         .result-table th, .result-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 5px;
             text-align: center;
+            font-size: 12px;
         }
         .result-table th {
             background-color: #f8f9fa;
             font-weight: bold;
+        }
+        .binary-row {
+            background-color: #f1f1f1;
         }
     </style>
 </head>
@@ -91,8 +95,8 @@
 </div>
 
 <script>
-    function ipToBinary(ip) {
-        return ip.split('.').map(octet => parseInt(octet).toString(2).padStart(8, '0')).join('.');
+    function ipToBinaryArray(ip) {
+        return ip.split('.').flatMap(octet => parseInt(octet).toString(2).padStart(8, '0').split(''));
     }
 
     function cidrToDottedDecimal(cidr) {
@@ -128,33 +132,42 @@
 
         const routingRequired = network1 !== network2;
 
-        const binaryIp1 = ipToBinary(ip1);
-        const binaryIp2 = ipToBinary(ip2);
-        const binaryMask = ipToBinary(subnetMask);
+        const binaryIp1 = ipToBinaryArray(ip1);
+        const binaryIp2 = ipToBinaryArray(ip2);
+        const binaryMask = ipToBinaryArray(subnetMask);
 
-        document.getElementById("result").innerHTML = `
+        // Construct HTML table to show binary output with each bit in its own column
+        let tableHtml = `
             <table class="result-table">
                 <tr>
-                    <th>Item</th>
-                    <th>IP Address 1</th>
-                    <th>IP Address 2</th>
-                    <th>Subnet Mask</th>
+                    <th>Type</th>
+                    ${Array.from({ length: 32 }, (_, i) => `<th>Bit ${i + 1}</th>`).join('')}
+                </tr>
+                <tr class="binary-row">
+                    <td>IP Address 1</td>
+                    ${binaryIp1.map(bit => `<td>${bit}</td>`).join('')}
+                </tr>
+                <tr class="binary-row">
+                    <td>IP Address 2</td>
+                    ${binaryIp2.map(bit => `<td>${bit}</td>`).join('')}
+                </tr>
+                <tr class="binary-row">
+                    <td>Subnet Mask</td>
+                    ${binaryMask.map(bit => `<td>${bit}</td>`).join('')}
                 </tr>
                 <tr>
-                    <td>Binary</td>
-                    <td>${binaryIp1}</td>
-                    <td>${binaryIp2}</td>
-                    <td>${binaryMask}</td>
+                    <td><strong>Network Address 1</strong></td>
+                    <td colspan="32">${network1}</td>
                 </tr>
                 <tr>
-                    <td>Network Address</td>
-                    <td>${network1}</td>
-                    <td>${network2}</td>
-                    <td></td>
+                    <td><strong>Network Address 2</strong></td>
+                    <td colspan="32">${network2}</td>
                 </tr>
             </table>
             <p><strong>Routing Required:</strong> ${routingRequired ? 'Yes' : 'No'}</p>
         `;
+
+        document.getElementById("result").innerHTML = tableHtml;
     }
 </script>
 
