@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subnet Routing Checker</title>
+</head>
+<body>
+    <h1>Subnet Routing Checker</h1>
+    <p>Enter two IP addresses and a subnet mask to check if routing is required.</p>
+
+    <form id="subnetForm">
+        <label for="ip1">IP Address 1:</label>
+        <input type="text" id="ip1" placeholder="e.g., 192.168.1.10" required><br><br>
+
+        <label for="ip2">IP Address 2:</label>
+        <input type="text" id="ip2" placeholder="e.g., 192.168.1.20" required><br><br>
+
+        <label for="subnetMask">Subnet Mask:</label>
+        <input type="text" id="subnetMask" placeholder="e.g., 255.255.255.0" required><br><br>
+
+        <button type="button" onclick="checkRouting()">Check Routing</button>
+    </form>
+
+    <h3>Result:</h3>
+    <div id="result"></div>
+
+    <script>
+        function ipToBinary(ip) {
+            return ip.split('.').map(octet => parseInt(octet).toString(2).padStart(8, '0')).join('.');
+        }
+
+        function calculateNetworkAddress(ip, mask) {
+            const ipOctets = ip.split('.').map(Number);
+            const maskOctets = mask.split('.').map(Number);
+            const network = ipOctets.map((octet, i) => octet & maskOctets[i]);
+            return network.join('.');
+        }
+
+        function checkRouting() {
+            const ip1 = document.getElementById("ip1").value;
+            const ip2 = document.getElementById("ip2").value;
+            const subnetMask = document.getElementById("subnetMask").value;
+
+            const network1 = calculateNetworkAddress(ip1, subnetMask);
+            const network2 = calculateNetworkAddress(ip2, subnetMask);
+
+            const routingRequired = network1 !== network2;
+
+            const binaryIp1 = ipToBinary(ip1);
+            const binaryIp2 = ipToBinary(ip2);
+            const binaryMask = ipToBinary(subnetMask);
+
+            document.getElementById("result").innerHTML = `
+                <p><strong>IP Address 1 (Binary):</strong> ${binaryIp1}</p>
+                <p><strong>IP Address 2 (Binary):</strong> ${binaryIp2}</p>
+                <p><strong>Subnet Mask (Binary):</strong> ${binaryMask}</p>
+                <p><strong>Network Address 1:</strong> ${network1}</p>
+                <p><strong>Network Address 2:</strong> ${network2}</p>
+                <p><strong>Routing Required:</strong> ${routingRequired ? 'Yes' : 'No'}</p>
+            `;
+        }
+    </script>
+</body>
+</html>
