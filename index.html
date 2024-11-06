@@ -38,6 +38,9 @@
 </head>
 <body>
     <h1>Articles of Faith Memorization</h1>
+    <p>Select an Article of Faith to memorize:</p>
+    <select id="articleSelector"></select>
+    
     <p>Click the words in the correct order to complete the Article.</p>
     <div class="selected-words" id="selectedWords"></div>
     <div class="word-bank" id="wordBank"></div>
@@ -53,16 +56,40 @@
             // Add more articles as needed
         ];
 
-        const articleIndex = 0; // Start with the first Article
-        let articleWords = articlesOfFaith[articleIndex].split(" ");
-        let shuffledWords = [...articleWords].sort(() => Math.random() - 0.5);
+        let articleIndex = 0;
+        let articleWords = [];
+        let shuffledWords = [];
         let selectedWords = [];
         let currentIndex = 0;
         let incorrectAttempts = 0;
 
+        const articleSelector = document.getElementById("articleSelector");
         const wordBank = document.getElementById("wordBank");
         const selectedWordsContainer = document.getElementById("selectedWords");
         const feedback = document.getElementById("feedback");
+
+        // Populate dropdown with article options
+        function populateArticleSelector() {
+            articlesOfFaith.forEach((article, index) => {
+                const option = document.createElement("option");
+                option.value = index;
+                option.textContent = `Article ${index + 1}`;
+                articleSelector.appendChild(option);
+            });
+        }
+
+        // Initialize words and shuffle when article changes
+        function loadArticle(index) {
+            articleIndex = index;
+            articleWords = articlesOfFaith[articleIndex].split(" ");
+            shuffledWords = [...articleWords].sort(() => Math.random() - 0.5);
+            selectedWords = [];
+            currentIndex = 0;
+            incorrectAttempts = 0;
+            feedback.textContent = "";
+            renderWordBank();
+            renderSelectedWords();
+        }
 
         // Render the shuffled word bank
         function renderWordBank() {
@@ -107,8 +134,14 @@
             selectedWordsContainer.innerHTML = selectedWords.join(" ");
         }
 
+        // Event listener for dropdown selection
+        articleSelector.addEventListener("change", (event) => {
+            loadArticle(event.target.value);
+        });
+
         // Initialize the app
-        renderWordBank();
+        populateArticleSelector();
+        loadArticle(articleIndex);
     </script>
 </body>
 </html>
