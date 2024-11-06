@@ -4,62 +4,159 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Subnet Routing Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .result-table th, .result-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .result-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
+
+<div class="container">
     <h1>Subnet Routing Checker</h1>
-    <p>Enter two IP addresses and a subnet mask to check if routing is required.</p>
+    <p>Enter two IP addresses and a subnet mask (CIDR or dotted decimal) to check if routing is required.</p>
 
     <form id="subnetForm">
         <label for="ip1">IP Address 1:</label>
-        <input type="text" id="ip1" placeholder="e.g., 192.168.1.10" required><br><br>
+        <input type="text" id="ip1" placeholder="e.g., 192.168.1.10" required><br>
 
         <label for="ip2">IP Address 2:</label>
-        <input type="text" id="ip2" placeholder="e.g., 192.168.1.20" required><br><br>
+        <input type="text" id="ip2" placeholder="e.g., 192.168.1.20" required><br>
 
-        <label for="subnetMask">Subnet Mask:</label>
-        <input type="text" id="subnetMask" placeholder="e.g., 255.255.255.0" required><br><br>
+        <label for="subnetMask">Subnet Mask (CIDR or dotted decimal):</label>
+        <input type="text" id="subnetMask" placeholder="e.g., 255.255.255.0 or /24" required><br>
 
         <button type="button" onclick="checkRouting()">Check Routing</button>
     </form>
 
-    <h3>Result:</h3>
     <div id="result"></div>
+</div>
 
-    <script>
-        function ipToBinary(ip) {
-            return ip.split('.').map(octet => parseInt(octet).toString(2).padStart(8, '0')).join('.');
-        }
+<script>
+    function ipToBinary(ip) {
+        return ip.split('.').map(octet => parseInt(octet).toString(2).padStart(8, '0')).join('.');
+    }
 
-        function calculateNetworkAddress(ip, mask) {
-            const ipOctets = ip.split('.').map(Number);
-            const maskOctets = mask.split('.').map(Number);
-            const network = ipOctets.map((octet, i) => octet & maskOctets[i]);
-            return network.join('.');
-        }
+    function cidrToDottedDecimal(cidr) {
+        let mask = parseInt(cidr, 10);
+        let binaryMask = '1'.repeat(mask).padEnd(32, '0');
+        return [
+            parseInt(binaryMask.slice(0, 8), 2),
+            parseInt(binaryMask.slice(8, 16), 2),
+            parseInt(binaryMask.slice(16, 24), 2),
+            parseInt(binaryMask.slice(24, 32), 2)
+        ].join('.');
+    }
 
-        function checkRouting() {
-            const ip1 = document.getElementById("ip1").value;
-            const ip2 = document.getElementById("ip2").value;
-            const subnetMask = document.getElementById("subnetMask").value;
+    function convertSubnetMask(mask) {
+        return mask.includes('/') ? cidrToDottedDecimal(mask.slice(1)) : mask;
+    }
 
-            const network1 = calculateNetworkAddress(ip1, subnetMask);
-            const network2 = calculateNetworkAddress(ip2, subnetMask);
+    function calculateNetworkAddress(ip, mask) {
+        const ipOctets = ip.split('.').map(Number);
+        const maskOctets = mask.split('.').map(Number);
+        const network = ipOctets.map((octet, i) => octet & maskOctets[i]);
+        return network.join('.');
+    }
 
-            const routingRequired = network1 !== network2;
+    function checkRouting() {
+        const ip1 = document.getElementById("ip1").value;
+        const ip2 = document.getElementById("ip2").value;
+        let subnetMask = document.getElementById("subnetMask").value;
+        subnetMask = convertSubnetMask(subnetMask);
 
-            const binaryIp1 = ipToBinary(ip1);
-            const binaryIp2 = ipToBinary(ip2);
-            const binaryMask = ipToBinary(subnetMask);
+        const network1 = calculateNetworkAddress(ip1, subnetMask);
+        const network2 = calculateNetworkAddress(ip2, subnetMask);
 
-            document.getElementById("result").innerHTML = `
-                <p><strong>IP Address 1 (Binary):</strong> ${binaryIp1}</p>
-                <p><strong>IP Address 2 (Binary):</strong> ${binaryIp2}</p>
-                <p><strong>Subnet Mask (Binary):</strong> ${binaryMask}</p>
-                <p><strong>Network Address 1:</strong> ${network1}</p>
-                <p><strong>Network Address 2:</strong> ${network2}</p>
-                <p><strong>Routing Required:</strong> ${routingRequired ? 'Yes' : 'No'}</p>
-            `;
-        }
-    </script>
+        const routingRequired = network1 !== network2;
+
+        const binaryIp1 = ipToBinary(ip1);
+        const binaryIp2 = ipToBinary(ip2);
+        const binaryMask = ipToBinary(subnetMask);
+
+        document.getElementById("result").innerHTML = `
+            <table class="result-table">
+                <tr>
+                    <th>Item</th>
+                    <th>IP Address 1</th>
+                    <th>IP Address 2</th>
+                    <th>Subnet Mask</th>
+                </tr>
+                <tr>
+                    <td>Binary</td>
+                    <td>${binaryIp1}</td>
+                    <td>${binaryIp2}</td>
+                    <td>${binaryMask}</td>
+                </tr>
+                <tr>
+                    <td>Network Address</td>
+                    <td>${network1}</td>
+                    <td>${network2}</td>
+                    <td></td>
+                </tr>
+            </table>
+            <p><strong>Routing Required:</strong> ${routingRequired ? 'Yes' : 'No'}</p>
+        `;
+    }
+</script>
+
 </body>
 </html>
