@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Articles of Faith Memorization Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        textarea {
+            width: 90%;
+            height: 150px;
+            margin: 10px 0;
+            font-size: 16px;
+            padding: 10px;
+        }
+        .feedback {
+            display: block;
+            margin: 20px auto;
+            width: 90%;
+            font-size: 16px;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+        .correct {
+            color: green;
+        }
+        .incorrect {
+            color: red;
+            text-decoration: underline;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Articles of Faith Memorization Test</h1>
+    <p>Select an Article of Faith to memorize:</p>
+    <select id="articleSelector"></select>
+
+    <div class="controls">
+        <label>
+            <input type="checkbox" id="ignorePunctuation"> Ignore Punctuation and Case
+        </label>
+    </div>
+
+    <textarea id="userInput" placeholder="Type the Article of Faith here..."></textarea>
+    <button onclick="checkMemorization()">Check</button>
+
+    <p id="result"></p>
+    <div class="feedback" id="feedback"></div>
+
+    <script>
+        const articlesOfFaith = [
+            "We believe in God, the Eternal Father, and in His Son, Jesus Christ, and in the Holy Ghost.",
+            "We believe that men will be punished for their own sins, and not for Adam’s transgression.",
+            "We believe that through the Atonement of Christ, all mankind may be saved, by obedience to the laws and ordinances of the Gospel.",
+            "We believe that the first principles and ordinances of the Gospel are: first, Faith in the Lord Jesus Christ; second, Repentance; third, Baptism by immersion for the remission of sins; fourth, Laying on of hands for the gift of the Holy Ghost.",
+            "We believe that a man must be called of God, by prophecy, and by the laying on of hands by those who are in authority, to preach the Gospel and administer in the ordinances thereof.",
+            "We believe in the same organization that existed in the Primitive Church, namely, apostles, prophets, pastors, teachers, evangelists, and so forth.",
+            "We believe in the gift of tongues, prophecy, revelation, visions, healing, interpretation of tongues, and so forth.",
+            "We believe the Bible to be the word of God as far as it is translated correctly; we also believe the Book of Mormon to be the word of God.",
+            "We believe all that God has revealed, all that He does now reveal, and we believe that He will yet reveal many great and important things pertaining to the Kingdom of God.",
+            "We believe in the literal gathering of Israel and in the restoration of the Ten Tribes; that Zion (the New Jerusalem) will be built upon the American continent; that Christ will reign personally upon the earth; and, that the earth will be renewed and receive its paradisiacal glory.",
+            "We claim the privilege of worshiping Almighty God according to the dictates of our own conscience, and allow all men the same privilege, let them worship how, where, or what they may.",
+            "We believe in being subject to kings, presidents, rulers, and magistrates, in obeying, honoring, and sustaining the law.",
+            "We believe in being honest, true, chaste, benevolent, virtuous, and in doing good to all men; indeed, we may say that we follow the admonition of Paul—We believe all things, we hope all things, we have endured many things, and hope to be able to endure all things. If there is anything virtuous, lovely, or of good report or praiseworthy, we seek after these things."
+        ];
+
+        const articleSelector = document.getElementById("articleSelector");
+        const userInput = document.getElementById("userInput");
+        const feedback = document.getElementById("feedback");
+        const result = document.getElementById("result");
+        const ignorePunctuation = document.getElementById("ignorePunctuation");
+
+        let selectedArticle = articlesOfFaith[0];
+
+        // Populate dropdown with article options
+        function populateArticleSelector() {
+            articlesOfFaith.forEach((article, index) => {
+                const option = document.createElement("option");
+                option.value = index;
+                option.textContent = `Article ${index + 1}`;
+                articleSelector.appendChild(option);
+            });
+
+            articleSelector.addEventListener("change", (event) => {
+                selectedArticle = articlesOfFaith[event.target.value];
+                userInput.value = "";
+                feedback.textContent = "";
+                result.textContent = "";
+            });
+        }
+
+        // Strip punctuation and adjust case if the ignore option is checked
+        function normalizeText(text) {
+            if (ignorePunctuation.checked) {
+                return text
+                    .replace(/[.,!?;:"'’]/g, "")
+                    .replace(/\s+/g, " ")
+                    .toLowerCase()
+                    .trim();
+            }
+            return text.trim();
+        }
+
+        // Compare user input to the article text
+        function checkMemorization() {
+            const userWords = normalizeText(userInput.value).split(" ");
+            const correctWords = normalizeText(selectedArticle).split(" ");
+
+            let feedbackHTML = "";
+            let isCorrect = true;
+
+            correctWords.forEach((word, index) => {
+                if (userWords[index] === word) {
+                    feedbackHTML += `<span class="correct">${word} </span>`;
+                } else {
+                    feedbackHTML += `<span class="incorrect">${userWords[index] || ""} </span>`;
+                    isCorrect = false;
+                }
+            });
+
+            feedback.innerHTML = feedbackHTML;
+
+            if (isCorrect && userWords.length === correctWords.length) {
+                result.textContent = "Congratulations! You typed the Article correctly.";
+                result.style.color = "green";
+            } else {
+                result.textContent = "There are errors in your typing. Keep practicing!";
+                result.style.color = "red";
+            }
+        }
+
+        // Initialize the app
+        populateArticleSelector();
+    </script>
+</body>
+</html>
