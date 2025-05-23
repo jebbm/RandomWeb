@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calorie Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-selection {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .user-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .user-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-btn.active {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+        }
+
+        .settings-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+        .setting-group {
+            margin-bottom: 15px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .setting-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .main-app {
+            display: none;
+        }
+
+        .main-app.active {
+            display: block;
+        }
+
+        .stats-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .daily-progress {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            flex-grow: 1;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0 15px;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #FF9800, #FFC107);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, #F44336, #FF5722);
+        }
+
+        .bubble-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .calorie-bubble {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: white;
+            margin: 0 auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .calorie-bubble:not(.consumed):not(.extra) {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+        }
+
+        .calorie-bubble.warning {
+            background: linear-gradient(45deg, #FF9800, #FFC107);
+        }
+
+        .calorie-bubble.danger {
+            background: linear-gradient(45deg, #F44336, #FF5722);
+        }
+
+        .calorie-bubble.consumed {
+            background: #999;
+            cursor: not-allowed;
+            transform: scale(0.9);
+        }
+
+        .calorie-bubble.extra {
+            background: linear-gradient(45deg, #9C27B0, #E91E63);
+            border: 3px solid #fff;
+        }
+
+        .calorie-bubble.extra.consumed {
+            background: #666;
+            border-color: #999;
+        }
+
+        .calorie-bubble:not(.consumed):hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn.danger {
+            background: linear-gradient(45deg, #F44336, #FF5722);
+        }
+
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .stats-panel.active {
+            display: block;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .weekly-calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+            border-radius: 10px;
+            font-size: 12px;
+            text-align: center;
+            padding: 5px;
+        }
+
+        .day-cell.today {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .day-cell.on-target {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            color: white;
+        }
+
+        .day-cell.over-target {
+            background: linear-gradient(45deg, #F44336, #FF5722);
+            color: white;
+        }
+
+        .notes-section {
+            margin-top: 20px;
+        }
+
+        .notes-section textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .bubble-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .calorie-bubble {
+                width: 70px;
+                height: 70px;
+                font-size: 16px;
+            }
+            
+            .daily-progress {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .progress-bar {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="text-align: center; margin-bottom: 20px; color: #333;">Calorie Tracker</h1>
+            
+            <div class="user-selection">
+                <button class="user-btn" onclick="selectUser('Jacob')">Jacob</button>
+                <button class="user-btn" onclick="selectUser('JorJa')">JorJa</button>
+                <button class="control-btn" onclick="toggleSettings()" style="margin-left: 20px;">Settings</button>
+            </div>
+
+            <div class="settings-panel" id="settingsPanel">
+                <div class="setting-group">
+                    <label>Daily Calorie Target:</label>
+                    <input type="number" id="dailyTarget" step="100" min="1000" max="5000" onchange="updateSettings()">
+                </div>
+                <div class="setting-group">
+                    <label>Weekly Extra Calories:</label>
+                    <input type="number" id="weeklyExtra" step="100" min="0" max="3000" onchange="updateSettings()">
+                </div>
+                <button class="control-btn" onclick="exportData()">Export Data</button>
+            </div>
+        </div>
+
+        <div class="main-app" id="mainApp">
+            <div class="stats-header">
+                <div class="daily-progress">
+                    <div><strong>Today:</strong> <span id="dailyTotal">0</span> / <span id="dailyTargetDisplay">2000</span> cal</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div><span id="remainingCals">2000</span> left</div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>Weekly Extra:</strong> <span id="weeklyUsed">0</span> / <span id="weeklyExtraDisplay">700</span> cal
+                    <span style="margin-left: 20px;">Streak: <span id="currentStreak">0</span> days</span>
+                </div>
+            </div>
+
+            <div class="bubble-container" id="bubbleContainer">
+                <!-- Bubbles will be generated by JavaScript -->
+            </div>
+
+            <div class="controls">
+                <button class="control-btn" onclick="undoLast()">Undo Last</button>
+                <button class="control-btn" onclick="showStats()">View Stats</button>
+                <button class="control-btn" onclick="showWeeklyView()">Weekly View</button>
+                <button class="control-btn danger" onclick="resetDay()">Reset Today</button>
+                <button class="control-btn danger" onclick="resetWeek()">Reset Week</button>
+            </div>
+
+            <div class="notes-section">
+                <label><strong>Today's Notes:</strong></label>
+                <textarea id="dailyNotes" placeholder="What did you eat today?" onchange="saveNotes()"></textarea>
+            </div>
+
+            <div class="stats-panel" id="statsPanel">
+                <h3>Statistics</h3>
+                <div id="statsContent">
+                    <!-- Stats will be populated by JavaScript -->
+                </div>
+                <button class="control-btn" onclick="hideStats()">Close</button>
+            </div>
+
+            <div class="stats-panel" id="weeklyPanel">
+                <h3>Weekly View</h3>
+                <div class="weekly-calendar" id="weeklyCalendar">
+                    <!-- Calendar will be populated by JavaScript -->
+                </div>
+                <button class="control-btn" onclick="hideWeekly()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let userData = {};
+        let lastAction = null;
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserData();
+            updateDisplay();
+        });
+
+        function selectUser(username) {
+            currentUser = username;
+            
+            // Update UI
+            document.querySelectorAll('.user-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === username) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            document.getElementById('mainApp').classList.add('active');
+            loadUserSettings();
+            generateBubbles();
+            updateDisplay();
+            loadDailyNotes();
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            panel.classList.toggle('active');
+        }
+
+        function loadUserData() {
+            const stored = JSON.parse(localStorage.getItem('calorieTracker') || '{}');
+            userData = stored;
+            
+            // Initialize users if they don't exist
+            ['Jacob', 'JorJa'].forEach(user => {
+                if (!userData[user]) {
+                    userData[user] = {
+                        dailyTarget: 2000,
+                        weeklyExtra: 700,
+                        dailyData: {},
+                        weeklyData: {},
+                        settings: { dailyTarget: 2000, weeklyExtra: 700 }
+                    };
+                }
+            });
+            
+            saveUserData();
+        }
+
+        function saveUserData() {
+            localStorage.setItem('calorieTracker', JSON.stringify(userData));
+        }
+
+        function loadUserSettings() {
+            if (!currentUser) return;
+            
+            const user = userData[currentUser];
+            document.getElementById('dailyTarget').value = user.settings.dailyTarget;
+            document.getElementById('weeklyExtra').value = user.settings.weeklyExtra;
+        }
+
+        function updateSettings() {
+            if (!currentUser) return;
+            
+            const dailyTarget = parseInt(document.getElementById('dailyTarget').value);
+            const weeklyExtra = parseInt(document.getElementById('weeklyExtra').value);
+            
+            userData[currentUser].settings.dailyTarget = dailyTarget;
+            userData[currentUser].settings.weeklyExtra = weeklyExtra;
+            
+            saveUserData();
+            generateBubbles();
+            updateDisplay();
+        }
+
+        function generateBubbles() {
+            if (!currentUser) return;
+            
+            const container = document.getElementById('bubbleContainer');
+            const user = userData[currentUser];
+            const today = getToday();
+            const dailyData = user.dailyData[today] || { consumed: 0, extraUsed: 0, bubbles: [] };
+            const target = user.settings.dailyTarget;
+            const regularBubbles = Math.ceil(target / 100);
+            const extraBubbles = Math.ceil(user.settings.weeklyExtra / 100);
+            
+            container.innerHTML = '';
+            
+            // Regular calorie bubbles
+            for (let i = 0; i < regularBubbles; i++) {
+                const bubble = createBubble(100, false, i);
+                container.appendChild(bubble);
+            }
+            
+            // Extra calorie bubbles
+            for (let i = 0; i < extraBubbles; i++) {
+                const bubble = createBubble(100, true, i + regularBubbles);
+                container.appendChild(bubble);
+            }
+        }
+
+        function createBubble(calories, isExtra, index) {
+            const bubble = document.createElement('button');
+            bubble.className = 'calorie-bubble';
+            bubble.textContent = calories;
+            
+            if (isExtra) {
+                bubble.classList.add('extra');
+            }
+            
+            const today = getToday();
+            const dailyData = userData[currentUser].dailyData[today] || { consumed: 0, extraUsed: 0, bubbles: [] };
+            
+            if (dailyData.bubbles.includes(index)) {
+                bubble.classList.add('consumed');
+            } else {
+                // Color coding based on progress
+                const user = userData[currentUser];
+                const currentTotal = dailyData.consumed;
+                const target = user.settings.dailyTarget;
+                const progress = currentTotal / target;
+                
+                if (!isExtra) {
+                    if (progress > 0.9) {
+                        bubble.classList.add('danger');
+                    } else if (progress > 0.7) {
+                        bubble.classList.add('warning');
+                    }
+                }
+            }
+            
+            bubble.onclick = () => consumeBubble(index, calories, isExtra);
+            return bubble;
+        }
+
+        function consumeBubble(index, calories, isExtra) {
+            if (!currentUser) return;
+            
+            const today = getToday();
+            const user = userData[currentUser];
+            
+            if (!user.dailyData[today]) {
+                user.dailyData[today] = { consumed: 0, extraUsed: 0, bubbles: [], notes: '' };
+            }
+            
+            const dailyData = user.dailyData[today];
+            
+            // Check if already consumed
+            if (dailyData.bubbles.includes(index)) return;
+            
+            // Store last action for undo
+            lastAction = { type: 'consume', index, calories, isExtra, date: today };
+            
+            // Add to consumed bubbles
+            dailyData.bubbles.push(index);
+            
+            if (isExtra) {
+                dailyData.extraUsed += calories;
+                updateWeeklyExtra(calories);
+            } else {
+                dailyData.consumed += calories;
+            }
+            
+            saveUserData();
+            generateBubbles();
+            updateDisplay();
+        }
+
+        function updateWeeklyExtra(calories) {
+            const weekKey = getWeekKey();
+            const user = userData[currentUser];
+            
+            if (!user.weeklyData[weekKey]) {
+                user.weeklyData[weekKey] = { extraUsed: 0 };
+            }
+            
+            user.weeklyData[weekKey].extraUsed += calories;
+        }
+
+        function undoLast() {
+            if (!lastAction || !currentUser) return;
+            
+            const user = userData[currentUser];
+            const dailyData = user.dailyData[lastAction.date];
+            
+            if (!dailyData) return;
+            
+            // Remove from bubbles array
+            const bubbleIndex = dailyData.bubbles.indexOf(lastAction.index);
+            if (bubbleIndex > -1) {
+                dailyData.bubbles.splice(bubbleIndex, 1);
+                
+                if (lastAction.isExtra) {
+                    dailyData.extraUsed -= lastAction.calories;
+                    const weekKey = getWeekKey();
+                    if (user.weeklyData[weekKey]) {
+                        user.weeklyData[weekKey].extraUsed -= lastAction.calories;
+                    }
+                } else {
+                    dailyData.consumed -= lastAction.calories;
+                }
+                
+                lastAction = null;
+                saveUserData();
+                generateBubbles();
+                updateDisplay();
+            }
+        }
+
+        function updateDisplay() {
+            if (!currentUser) return;
+            
+            const user = userData[currentUser];
+            const today = getToday();
+            const dailyData = user.dailyData[today] || { consumed: 0, extraUsed: 0, bubbles: [] };
+            const target = user.settings.dailyTarget;
+            const weekKey = getWeekKey();
+            const weeklyData = user.weeklyData[weekKey] || { extraUsed: 0 };
+            
+            // Update daily display
+            document.getElementById('dailyTotal').textContent = dailyData.consumed;
+            document.getElementById('dailyTargetDisplay').textContent = target;
+            document.getElementById('remainingCals').textContent = Math.max(0, target - dailyData.consumed);
+            
+            // Update progress bar
+            const progress = Math.min(100, (dailyData.consumed / target) * 100);
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = progress + '%';
+            
+            progressFill.className = 'progress-fill';
+            if (progress > 90) {
+                progressFill.classList.add('danger');
+            } else if (progress > 70) {
+                progressFill.classList.add('warning');
+            }
+            
+            // Update weekly extra
+            document.getElementById('weeklyUsed').textContent = weeklyData.extraUsed;
+            document.getElementById('weeklyExtraDisplay').textContent = user.settings.weeklyExtra;
+            
+            // Update streak
+            document.getElementById('currentStreak').textContent = calculateStreak();
+        }
+
+        function calculateStreak() {
+            if (!currentUser) return 0;
+            
+            const user = userData[currentUser];
+            const target = user.settings.dailyTarget;
+            let streak = 0;
+            let currentDate = new Date();
+            
+            while (true) {
+                const dateKey = formatDate(currentDate);
+                const dayData = user.dailyData[dateKey];
+                
+                if (!dayData || dayData.consumed < target) {
+                    break;
+                }
+                
+                streak++;
+                currentDate.setDate(currentDate.getDate() - 1);
+                
+                // Prevent infinite loop
+                if (streak > 365) break;
+            }
+            
+            return streak;
+        }
+
+        function resetDay() {
+            if (!currentUser || !confirm('Reset today\'s calories?')) return;
+            
+            const today = getToday();
+            const user = userData[currentUser];
+            
+            if (user.dailyData[today]) {
+                delete user.dailyData[today];
+                saveUserData();
+                generateBubbles();
+                updateDisplay();
+                loadDailyNotes();
+            }
+        }
+
+        function resetWeek() {
+            if (!currentUser || !confirm('Reset this week\'s extra calories?')) return;
+            
+            const weekKey = getWeekKey();
+            const user = userData[currentUser];
+            
+            if (user.weeklyData[weekKey]) {
+                delete user.weeklyData[weekKey];
+                saveUserData();
+                updateDisplay();
+            }
+        }
+
+        function showStats() {
+            if (!currentUser) return;
+            
+            const panel = document.getElementById('statsPanel');
+            const content = document.getElementById('statsContent');
+            const user = userData[currentUser];
+            
+            // Calculate statistics
+            const days = Object.keys(user.dailyData);
+            const totalDays = days.length;
+            const target = user.settings.dailyTarget;
+            
+            let totalCalories = 0;
+            let daysOnTarget = 0;
+            let daysOverTarget = 0;
+            
+            days.forEach(day => {
+                const dayData = user.dailyData[day];
+                totalCalories += dayData.consumed;
+                
+                if (dayData.consumed >= target) {
+                    daysOnTarget++;
+                }
+                if (dayData.consumed > target) {
+                    daysOverTarget++;
+                }
+            });
+            
+            const averageDaily = totalDays > 0 ? Math.round(totalCalories / totalDays) : 0;
+            const targetPercentage = totalDays > 0 ? Math.round((daysOnTarget / totalDays) * 100) : 0;
+            
+            content.innerHTML = `
+                <div class="stat-item"><span>Total Days Tracked:</span><span>${totalDays}</span></div>
+                <div class="stat-item"><span>Average Daily Calories:</span><span>${averageDaily}</span></div>
+                <div class="stat-item"><span>Days Meeting Target:</span><span>${daysOnTarget} (${targetPercentage}%)</span></div>
+                <div class="stat-item"><span>Days Over Target:</span><span>${daysOverTarget}</span></div>
+                <div class="stat-item"><span>Current Streak:</span><span>${calculateStreak()} days</span></div>
+                <div class="stat-item"><span>Total Calories Tracked:</span><span>${totalCalories.toLocaleString()}</span></div>
+            `;
+            
+            panel.classList.add('active');
+        }
+
+        function hideStats() {
+            document.getElementById('statsPanel').classList.remove('active');
+        }
+
+        function showWeeklyView() {
+            if (!currentUser) return;
+            
+            const panel = document.getElementById('weeklyPanel');
+            const calendar = document.getElementById('weeklyCalendar');
+            const user = userData[currentUser];
+            const target = user.settings.dailyTarget;
+            
+            calendar.innerHTML = '';
+            
+            // Get current week
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startOfWeek);
+                date.setDate(startOfWeek.getDate() + i);
+                const dateKey = formatDate(date);
+                const dayData = user.dailyData[dateKey] || { consumed: 0 };
+                
+                const cell = document.createElement('div');
+                cell.className = 'day-cell';
+                
+                if (dateKey === getToday()) {
+                    cell.classList.add('today');
+                } else if (dayData.consumed >= target) {
+                    cell.classList.add('on-target');
+                } else if (dayData.consumed > target) {
+                    cell.classList.add('over-target');
+                }
+                
+                cell.innerHTML = `
+                    <div>${days[i]}</div>
+                    <div>${date.getDate()}</div>
+                    <div>${dayData.consumed}</div>
+                `;
+                
+                calendar.appendChild(cell);
+            }
+            
+            panel.classList.add('active');
+        }
+
+        function hideWeekly() {
+            document.getElementById('weeklyPanel').classList.remove('active');
+        }
+
+        function saveNotes() {
+            if (!currentUser) return;
+            
+            const today = getToday();
+            const notes = document.getElementById('dailyNotes').value;
+            const user = userData[currentUser];
+            
+            if (!user.dailyData[today]) {
+                user.dailyData[today] = { consumed: 0, extraUsed: 0, bubbles: [], notes: '' };
+            }
+            
+            user.dailyData[today].notes = notes;
+            saveUserData();
+        }
+
+        function loadDailyNotes() {
+            if (!currentUser) return;
+            
+            const today = getToday();
+            const user = userData[currentUser];
+            const dailyData = user.dailyData[today] || { notes: '' };
+            
+            document.getElementById('dailyNotes').value = dailyData.notes || '';
+        }
+
+        function exportData() {
+            if (!currentUser) return;
+            
+            const user = userData[currentUser];
+            const exportData = {
+                user: currentUser,
+                settings: user.settings,
+                dailyData: user.dailyData,
+                weeklyData: user.weeklyData,
+                exportDate: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${currentUser}_calorie_data_${getToday()}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        // Utility functions
+        function getToday() {
+            return formatDate(new Date());
+        }
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function getWeekKey() {
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            return formatDate(startOfWeek);
+        }
+    </script>
+</body>
+</html>
