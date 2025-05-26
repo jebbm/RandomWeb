@@ -92,6 +92,23 @@
             font-size: 16px;
         }
 
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            transform: scale(1.2);
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
         .meal-settings {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -399,6 +416,13 @@
             transform: scale(1.1);
         }
 
+        .skip-note {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 10px;
@@ -443,6 +467,11 @@
                 <div class="setting-group">
                     <label>Weekly Extra Calories:</label>
                     <input type="number" id="weeklyExtra" step="100" min="0" max="3000" onchange="updateSettings()">
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enableFoodLogging" onchange="updateSettings()">
+                    <label for="enableFoodLogging">Enable food logging prompts</label>
                 </div>
                 
                 <div class="setting-group">
@@ -523,10 +552,12 @@
     <div id="foodModal" class="modal">
         <div class="modal-content">
             <h3>What did you eat?</h3>
-            <input type="text" id="foodInput" placeholder="e.g., Apple, Sandwich, etc." maxlength="20">
+            <div class="skip-note">You can leave this empty if you prefer</div>
+            <input type="text" id="foodInput" placeholder="e.g., Apple, Sandwich, etc. (optional)" maxlength="20">
             <textarea id="foodNotes" placeholder="Optional: Add more details..." rows="3"></textarea>
             <div class="modal-buttons">
                 <button class="small-btn" onclick="saveFoodNote()">Save</button>
+                <button class="small-btn" onclick="skipFoodNote()">Skip</button>
                 <button class="small-btn danger" onclick="closeFoodModal()">Cancel</button>
             </div>
         </div>
@@ -578,11 +609,17 @@
                     dailyTarget: 2000,
                     weeklyExtra: 700,
                     backgroundTheme: 0,
+                    enableFoodLogging: true,
                     breakfastBubbles: 4,
                     lunchBubbles: 6,
                     dinnerBubbles: 8,
                     snacksBubbles: 2
                 };
+            }
+            
+            // Add enableFoodLogging if it doesn't exist (for backward compatibility)
+            if (userData.settings.enableFoodLogging === undefined) {
+                userData.settings.enableFoodLogging = true;
             }
             
             if (!userData.dailyData) userData.dailyData = {};
@@ -626,6 +663,7 @@
             
             document.getElementById('dailyTarget').value = settings.dailyTarget;
             document.getElementById('weeklyExtra').value = settings.weeklyExtra;
+            document.getElementById('enableFoodLogging').checked = settings.enableFoodLogging;
             document.getElementById('breakfastBubbles').value = settings.breakfastBubbles;
             document.getElementById('lunchBubbles').value = settings.lunchBubbles;
             document.getElementById('dinnerBubbles').value = settings.dinnerBubbles;
@@ -640,6 +678,7 @@
             
             settings.dailyTarget = parseInt(document.getElementById('dailyTarget').value);
             settings.weeklyExtra = parseInt(document.getElementById('weeklyExtra').value);
+            settings.enableFoodLogging = document.getElementById('enableFoodLogging').checked;
             settings.breakfastBubbles = parseInt(document.getElementById('breakfastBubbles').value);
             settings.lunchBubbles = parseInt(document.getElementById('lunchBubbles').value);
             settings.dinnerBubbles = parseInt(document.getElementById('dinnerBubbles').value);
@@ -776,13 +815,42 @@
                 } else {
                     dailyData.consumed -= calories;
                 }
+                
+                saveUserData();
+                generateMeals();
+                updateDisplay();
             } else {
-                // Add bubble (consume) - show food input modal
+                // Add bubble (consume)
                 currentBubbleData = { bubbleId, calories, isExtra, mealType };
-                showFoodModal();
-                return; // Don't update display yet, wait for modal
+                
+                if (userData.settings.enableFoodLogging) {
+                    // Show food input modal
+                    showFoodModal();
+                } else {
+                    // Skip logging and directly consume
+                    consumeBubbleDirectly();
+                }
+            }
+        }
+
+        function consumeBubbleDirectly() {
+            if (!currentBubbleData) return;
+            
+            const { bubbleId, calories, isExtra } = currentBubbleData;
+            const today = getToday();
+            const dailyData = userData.dailyData[today];
+            
+            // Mark bubble as consumed without notes
+            dailyData.bubbles[bubbleId] = true;
+            
+            if (isExtra) {
+                dailyData.extraUsed += calories;
+                updateWeeklyExtra(calories);
+            } else {
+                dailyData.consumed += calories;
             }
             
+            currentBubbleData = null;
             saveUserData();
             generateMeals();
             updateDisplay();
@@ -802,334 +870,4 @@
             if (!currentBubbleData) return;
             
             const foodName = document.getElementById('foodInput').value.trim();
-            const foodNotes = document.getElementById('foodNotes').value.trim();
-            
-            if (!foodName) {
-                alert('Please enter what you ate!');
-                return;
-            }
-            
-            const { bubbleId, calories, isExtra } = currentBubbleData;
-            const today = getToday();
-            const dailyData = userData.dailyData[today];
-            
-            // Mark bubble as consumed
-            dailyData.bubbles[bubbleId] = true;
-            dailyData.notes[bubbleId] = foodName;
-            
-            if (isExtra) {
-                dailyData.extraUsed += calories;
-                updateWeeklyExtra(calories);
-            } else {
-                dailyData.consumed += calories;
-            }
-            
-            // Clear modal
-            document.getElementById('foodInput').value = '';
-            document.getElementById('foodNotes').value = '';
-            closeFoodModal();
-            
-            saveUserData();
-            generateMeals();
-            updateDisplay();
-        }
-
-        function updateWeeklyExtra(calories) {
-            const weekKey = getWeekKey();
-            
-            if (!userData.weeklyData[weekKey]) {
-                userData.weeklyData[weekKey] = { extraUsed: 0 };
-            }
-            
-            userData.weeklyData[weekKey].extraUsed += calories;
-        }
-
-        function updateDisplay() {
-            const today = getToday();
-            const dailyData = userData.dailyData[today] || { consumed: 0, extraUsed: 0, bubbles: {}, notes: {} };
-            const target = userData.settings.dailyTarget;
-            const weekKey = getWeekKey();
-            const weeklyData = userData.weeklyData[weekKey] || { extraUsed: 0 };
-            
-            // Update daily display
-            document.getElementById('dailyTotal').textContent = dailyData.consumed;
-            document.getElementById('dailyTargetDisplay').textContent = target;
-            document.getElementById('remainingCals').textContent = Math.max(0, target - dailyData.consumed);
-            
-            // Update progress bar
-            const progress = Math.min(100, (dailyData.consumed / target) * 100);
-            const progressFill = document.getElementById('progressFill');
-            progressFill.style.width = progress + '%';
-            
-            progressFill.className = 'progress-fill';
-            if (progress > 90) {
-                progressFill.classList.add('danger');
-            } else if (progress > 70) {
-                progressFill.classList.add('warning');
-            }
-            
-            // Update weekly extra
-            document.getElementById('weeklyUsed').textContent = weeklyData.extraUsed;
-            document.getElementById('weeklyExtraDisplay').textContent = userData.settings.weeklyExtra;
-            
-            // Update streak
-            document.getElementById('currentStreak').textContent = calculateStreak();
-        }
-
-        function calculateStreak() {
-            const target = userData.settings.dailyTarget;
-            let streak = 0;
-            let currentDate = new Date();
-            
-            while (true) {
-                const dateKey = formatDate(currentDate);
-                const dayData = userData.dailyData[dateKey];
-                
-                if (!dayData || dayData.consumed < target) {
-                    break;
-                }
-                
-                streak++;
-                currentDate.setDate(currentDate.getDate() - 1);
-                
-                // Prevent infinite loop
-                if (streak > 365) break;
-            }
-            
-            return streak;
-        }
-
-        function resetDay() {
-            if (!confirm('Reset today\'s calories?')) return;
-            
-            const today = getToday();
-            
-            if (userData.dailyData[today]) {
-                delete userData.dailyData[today];
-                saveUserData();
-                generateMeals();
-                updateDisplay();
-            }
-        }
-
-        function resetWeek() {
-            if (!confirm('Reset this week\'s extra calories?')) return;
-            
-            const weekKey = getWeekKey();
-            
-            if (userData.weeklyData[weekKey]) {
-                delete userData.weeklyData[weekKey];
-                saveUserData();
-                updateDisplay();
-            }
-        }
-
-        function showStats() {
-            const panel = document.getElementById('statsPanel');
-            const content = document.getElementById('statsContent');
-            
-            // Calculate statistics
-            const days = Object.keys(userData.dailyData);
-            const totalDays = days.length;
-            const target = userData.settings.dailyTarget;
-            
-            let totalCalories = 0;
-            let daysOnTarget = 0;
-            let daysOverTarget = 0;
-            let totalNotes = 0;
-            
-            days.forEach(day => {
-                const dayData = userData.dailyData[day];
-                totalCalories += dayData.consumed;
-                
-                if (dayData.consumed >= target) {
-                    daysOnTarget++;
-                }
-                if (dayData.consumed > target) {
-                    daysOverTarget++;
-                }
-                
-                if (dayData.notes && Object.keys(dayData.notes).length > 0) {
-                    totalNotes += Object.keys(dayData.notes).length;
-                }
-            });
-            
-            const averageDaily = totalDays > 0 ? Math.round(totalCalories / totalDays) : 0;
-            const targetPercentage = totalDays > 0 ? Math.round((daysOnTarget / totalDays) * 100) : 0;
-            
-            content.innerHTML = `
-                <div class="stat-item"><span>Total Days Tracked:</span><span>${totalDays}</span></div>
-                <div class="stat-item"><span>Average Daily Calories:</span><span>${averageDaily}</span></div>
-                <div class="stat-item"><span>Days Meeting Target:</span><span>${daysOnTarget} (${targetPercentage}%)</span></div>
-                <div class="stat-item"><span>Days Over Target:</span><span>${daysOverTarget}</span></div>
-                <div class="stat-item"><span>Current Streak:</span><span>${calculateStreak()} days</span></div>
-                <div class="stat-item"><span>Total Calories Tracked:</span><span>${totalCalories.toLocaleString()}</span></div>
-                <div class="stat-item"><span>Food Items Logged:</span><span>${totalNotes}</span></div>
-            `;
-            
-            panel.classList.add('active');
-        }
-
-        function hideStats() {
-            document.getElementById('statsPanel').classList.remove('active');
-        }
-
-        function showWeeklyView() {
-            const panel = document.getElementById('weeklyPanel');
-            const calendar = document.getElementById('weeklyCalendar');
-            const target = userData.settings.dailyTarget;
-            
-            calendar.innerHTML = '';
-            
-            // Get current week
-            const today = new Date();
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - today.getDay());
-            
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startOfWeek);
-                date.setDate(startOfWeek.getDate() + i);
-                const dateKey = formatDate(date);
-                const dayData = userData.dailyData[dateKey] || { consumed: 0 };
-                
-                const cell = document.createElement('div');
-                cell.className = 'day-cell';
-                
-                if (dateKey === getToday()) {
-                    cell.classList.add('today');
-                } else if (dayData.consumed >= target) {
-                    cell.classList.add('on-target');
-                } else if (dayData.consumed > target) {
-                    cell.classList.add('over-target');
-                }
-                
-                cell.innerHTML = `
-                    <div>${days[i]}</div>
-                    <div>${date.getDate()}</div>
-                    <div>${dayData.consumed}</div>
-                `;
-                
-                calendar.appendChild(cell);
-            }
-            
-            panel.classList.add('active');
-        }
-
-        function hideWeekly() {
-            document.getElementById('weeklyPanel').classList.remove('active');
-        }
-
-        function exportData() {
-            const exportData = {
-                settings: userData.settings,
-                dailyData: userData.dailyData,
-                weeklyData: userData.weeklyData,
-                exportDate: new Date().toISOString(),
-                version: '2.0'
-            };
-            
-            const dataStr = JSON.stringify(exportData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `calorie_tracker_data_${getToday()}.json`;
-            link.click();
-            
-            URL.revokeObjectURL(url);
-        }
-
-        function showImportModal() {
-            document.getElementById('importModal').style.display = 'block';
-        }
-
-        function closeImportModal() {
-            document.getElementById('importModal').style.display = 'none';
-            document.getElementById('importFile').value = '';
-        }
-
-        function importData() {
-            const fileInput = document.getElementById('importFile');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                alert('Please select a file to import.');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    
-                    // Validate the data structure
-                    if (!importedData.settings || !importedData.dailyData) {
-                        throw new Error('Invalid data format');
-                    }
-                    
-                    // Merge with existing data
-                    if (confirm('This will merge the imported data with your existing data. Continue?')) {
-                        // Merge settings (imported takes precedence)
-                        userData.settings = { ...userData.settings, ...importedData.settings };
-                        
-                        // Merge daily data
-                        userData.dailyData = { ...userData.dailyData, ...importedData.dailyData };
-                        
-                        // Merge weekly data
-                        if (importedData.weeklyData) {
-                            userData.weeklyData = { ...userData.weeklyData, ...importedData.weeklyData };
-                        }
-                        
-                        saveUserData();
-                        loadUserSettings();
-                        generateMeals();
-                        updateDisplay();
-                        
-                        closeImportModal();
-                        alert('Data imported successfully!');
-                    }
-                } catch (error) {
-                    alert('Error importing data: ' + error.message);
-                }
-            };
-            
-            reader.readAsText(file);
-        }
-
-        // Modal event listeners
-        document.getElementById('foodModal').addEventListener('click', function(e) {
-            if (e.target === this) closeFoodModal();
-        });
-
-        document.getElementById('importModal').addEventListener('click', function(e) {
-            if (e.target === this) closeImportModal();
-        });
-
-        // Enter key support for food modal
-        document.getElementById('foodInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                saveFoodNote();
-            }
-        });
-
-        // Utility functions
-        function getToday() {
-            return formatDate(new Date());
-        }
-
-        function formatDate(date) {
-            return date.toISOString().split('T')[0];
-        }
-
-        function getWeekKey() {
-            const today = new Date();
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - today.getDay());
-            return formatDate(startOfWeek);
-        }
-    </script>
-</body>
-</html>
+            const foodNotes = document.getElementById('foodNotes').value.
