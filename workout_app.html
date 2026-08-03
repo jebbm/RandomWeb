@@ -60,7 +60,6 @@
             font-size: 0.9rem;
         }
 
-        /* Screens */
         .screen {
             display: none;
             flex-direction: column;
@@ -71,7 +70,6 @@
             display: flex;
         }
 
-        /* Setup Screen */
         textarea {
             width: 100%;
             height: 180px;
@@ -113,7 +111,6 @@
             background: #ef4444;
         }
 
-        /* Workout Screen Header */
         .progress-bar-container {
             width: 100%;
             height: 8px;
@@ -178,7 +175,6 @@
             font-weight: 600;
         }
 
-        /* Main Display (Timer / Reps) */
         .timer-display {
             font-size: 4rem;
             font-weight: 900;
@@ -194,7 +190,6 @@
             font-size: 0.9rem;
         }
 
-        /* Controls Grid */
         .controls-grid {
             display: grid;
             grid-template-columns: 1fr 2fr 1fr;
@@ -211,7 +206,6 @@
             border: 1px dashed var(--border-color);
         }
 
-        /* Summary Screen */
         .stats-box {
             background: #0f172a;
             border-radius: 12px;
@@ -318,22 +312,22 @@ let currentSetIndex = 1;
 let currentPhase = 'PREP'; // PREP, WORK, REST_SET, REST_EX
 let timer = null;
 let secondsLeft = 0;
+let currentRep = 0;
+let cadenceTimerCount = 0;
 let isPaused = false;
 let totalWorkoutSeconds = 0;
 let workoutTimer = null;
 let wakeLock = null;
 
-// Initialize Default CSV
 document.getElementById('csv-input').value = DEFAULT_CSV;
 
 function resetDefaultCSV() {
     document.getElementById('csv-input').value = DEFAULT_CSV;
 }
 
-// Simple Speech Engine Wrapper
 function speak(text) {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Stop ongoing speech
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
@@ -341,7 +335,6 @@ function speak(text) {
     }
 }
 
-// Request Screen Wake Lock
 async function requestWakeLock() {
     try {
         if ('wakeLock' in navigator) {
@@ -359,7 +352,6 @@ function releaseWakeLock() {
     }
 }
 
-// Parse CSV String
 function parseCSV(text) {
     const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length < 2) return [];
@@ -382,7 +374,7 @@ function parseCSV(text) {
             prep_time: parseInt(row.prep_time) || 5,
             rest_between_sets: parseInt(row.rest_between_sets) || 30,
             rest_after_exercise: parseInt(row.rest_after_exercise) || 45,
-            rep_cadence: parseInt(row.rep_cadence) || 0,
+            rep_cadence: parseInt(row.rep_cadence) || 3,
             image_url: row.image_url || ''
         });
     }
@@ -408,13 +400,11 @@ function startWorkout() {
     totalWorkoutSeconds = 0;
     isPaused = false;
 
-    // Unlock speech engine & screen lock on user click
     speak("Starting workout. Get ready.");
     requestWakeLock();
 
     showScreen('workout-screen');
 
-    // Overall Timer
     clearInterval(workoutTimer);
     workoutTimer = setInterval(() => {
         if (!isPaused) totalWorkoutSeconds++;
@@ -439,11 +429,9 @@ function setupPhase(phase) {
     currentPhase = phase;
     const ex = workoutData[currentExIndex];
 
-    // UI Updates
     document.getElementById('exercise-title').innerText = ex.name;
     document.getElementById('sets-info').innerText = `Set ${currentSetIndex} of ${ex.sets}`;
 
-    // Image Setup
     const imgElem = document.getElementById('exercise-img');
     const placeholder = document.getElementById('image-placeholder');
     if (ex.image_url) {
@@ -456,7 +444,6 @@ function setupPhase(phase) {
         placeholder.innerText = ex.name;
     }
 
-    // Badge styling & Phase setup
     const badge = document.getElementById('phase-badge');
     const subDisplay = document.getElementById('sub-display');
 
@@ -466,7 +453,7 @@ function setupPhase(phase) {
         secondsLeft = ex.prep_time;
         subDisplay.innerText = "seconds until work";
         speak(`Get ready for ${ex.name}`);
-        updateNextPreview(`Up Next: Set 1 of ${ex.name}`);
+        updateNextPreview(`Up Next: Set ${currentSetIndex} of ${ex.name}`);
     } else if (phase === 'WORK') {
         badge.innerText = "WORK";
         badge.style.background = "var(--accent-work)";
@@ -475,9 +462,10 @@ function setupPhase(phase) {
             subDisplay.innerText = "seconds remaining";
             speak(`Begin ${ex.name}, ${ex.target} seconds`);
         } else {
-            secondsLeft = 0;
-            subDisplay.innerText = `Target: ${ex.target} Reps (Tap Next when done)`;
-            speak(`Set ${currentSetIndex}. Do ${ex.target} ${ex.name}`);
+            currentRep = 1;
+            cadenceTimerCount = 0;
+            subDisplay.innerText = `Target: ${ex.target} Reps`;
+            speak(`Set ${currentSetIndex}. Do ${ex.target} ${ex.name}. 1`);
         }
         updateNextPreview(currentSetIndex < ex.sets ? "Next: Rest Between Sets" : "Next: Exercise Rest / Move On");
     } else if (phase === 'REST_SET') {
@@ -507,7 +495,7 @@ function renderDisplay() {
     const ex = workoutData[currentExIndex];
 
     if (currentPhase === 'WORK' && ex.type === 'reps') {
-        mainDisplay.innerText = `${ex.target} REPS`;
+        mainDisplay.innerText = `${currentRep} / ${ex.target}`;
     } else {
         const mins = Math.floor(secondsLeft / 60);
         const secs = secondsLeft % 60;
@@ -525,34 +513,38 @@ function runTimerLogic() {
     timer = setInterval(() => {
         if (isPaused) return;
 
-        // Reps pacing speech if applicable
+        // Rep counting logic
         if (currentPhase === 'WORK' && ex.type === 'reps') {
-            // For reps, user manually taps next or we just display rep count
+            const cadence = ex.rep_cadence > 0 ? ex.rep_cadence : 3;
+            cadenceTimerCount++;
+
+            if (cadenceTimerCount >= cadence) {
+                cadenceTimerCount = 0;
+                if (currentRep < ex.target) {
+                    currentRep++;
+                    renderDisplay();
+                    speak(currentRep.toString());
+                } else {
+                    // Set complete
+                    advanceAfterWorkPhase();
+                }
+            }
             return;
         }
 
+        // Timer logic for PREP, REST, or timed exercises
         if (secondsLeft > 0) {
             secondsLeft--;
             renderDisplay();
 
-            // Speech count down for last 3 seconds
             if (secondsLeft <= 3 && secondsLeft > 0) {
                 speak(secondsLeft.toString());
             }
         } else {
-            // Phase Transitions
             if (currentPhase === 'PREP') {
                 setupPhase('WORK');
             } else if (currentPhase === 'WORK') {
-                if (currentSetIndex < ex.sets) {
-                    setupPhase('REST_SET');
-                } else {
-                    if (currentExIndex < workoutData.length - 1) {
-                        setupPhase('REST_EX');
-                    } else {
-                        finishWorkout();
-                    }
-                }
+                advanceAfterWorkPhase();
             } else if (currentPhase === 'REST_SET') {
                 currentSetIndex++;
                 setupPhase('WORK');
@@ -565,16 +557,22 @@ function runTimerLogic() {
     }, 1000);
 }
 
-function nextStep() {
+function advanceAfterWorkPhase() {
     const ex = workoutData[currentExIndex];
-    if (currentPhase === 'WORK') {
-        if (currentSetIndex < ex.sets) {
-            setupPhase('REST_SET');
-        } else if (currentExIndex < workoutData.length - 1) {
+    if (currentSetIndex < ex.sets) {
+        setupPhase('REST_SET');
+    } else {
+        if (currentExIndex < workoutData.length - 1) {
             setupPhase('REST_EX');
         } else {
             finishWorkout();
         }
+    }
+}
+
+function nextStep() {
+    if (currentPhase === 'WORK') {
+        advanceAfterWorkPhase();
     } else if (currentPhase === 'REST_SET') {
         currentSetIndex++;
         setupPhase('WORK');
@@ -618,10 +616,10 @@ function updateOverallProgress() {
     workoutData.forEach((ex, idx) => {
         const totalSets = ex.sets;
         for (let s = 1; s <= totalSets; s++) {
-            totalPhases++; // Work set
-            if (s < totalSets) totalPhases++; // Rest set
+            totalPhases++;
+            if (s < totalSets) totalPhases++;
         }
-        if (idx < workoutData.length - 1) totalPhases++; // Rest exercise
+        if (idx < workoutData.length - 1) totalPhases++;
     });
 
     for (let i = 0; i < currentExIndex; i++) {
