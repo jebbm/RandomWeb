@@ -17,3 +17,29 @@ Friday,Front Raises,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture15.png
 Friday,Dumbbell Curls (alternate grip),reps,12,3,10,60,90,2,20-30 lbs each,images/Picture16.png
 Friday,Overhead Tricep Extension,reps,12,3,10,60,90,2,25-35 lbs (single DB),images/Picture17.png
 Friday,Dumbbell Skull Crushers,reps,12,3,10,60,90,2,15-25 lbs each,images/Picture18.png
+day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,notes,image_url
+Monday,Dumbbell Bench Press (floor),reps,12,3,10,60,90,2,25-35 lbs each,images/Picture1.png
+Monday,Scapular Squeezes,reps,10,2,10,30,60,3,Hold 5 seconds at peak contraction,images/scapular_squeeze.png
+Monday,Band External Rotation,reps,10,3,10,45,60,2,Keep elbow tucked at 90-degree angle,images/band_rotation.png
+Monday,Wall Slides,reps,10,2,10,45,60,3,Slide slowly to activate shoulders safely,images/wall_slides.png
+Monday,Bicep Curls,reps,12,3,10,60,60,2,Keep elbows pinned to sides; use 2-5 lbs,images/bicep_curls.png
+Monday,Tricep Kickbacks,reps,12,3,10,60,90,2,Keep elbows pinned to sides; use 2-5 lbs,images/tricep_kickbacks.png
+Wednesday,Scapular Squeezes,reps,10,2,10,30,60,3,Hold 5 seconds at peak contraction,images/scapular_squeeze.png
+Wednesday,Band External Rotation,reps,10,3,10,45,60,2,Keep elbow tucked at 90-degree angle,images/band_rotation.png
+Wednesday,Wall Slides,reps,10,2,10,45,60,3,Slide slowly to activate shoulders safely,images/wall_slides.png
+Wednesday,Bicep Curls,reps,12,3,10,60,60,2,Keep elbows pinned to sides; use 2-5 lbs,images/bicep_curls.png
+Wednesday,Tricep Kickbacks,reps,12,3,10,60,90,2,Keep elbows pinned to sides; use 2-5 lbs,images/tricep_kickbacks.png
+Friday,Scapular Squeezes,reps,10,2,10,30,60,3,Hold 5 seconds at peak contraction,images/scapular_squeeze.png
+Friday,Band External Rotation,reps,10,3,10,45,60,2,Keep elbow tucked at 90-degree angle,images/band_rotation.png
+Friday,Wall Slides,reps,10,2,10,45,60,3,Slide slowly to activate shoulders safely,images/wall_slides.png
+Friday,Bicep Curls,reps,12,3,10,60,60,2,Keep elbows pinned to sides; use 2-5 lbs,images/bicep_curls.png
+Friday,Tricep Kickbacks,reps,12,3,10,60,90,2,Keep elbows pinned to sides; use 2-5 lbs,images/tricep_kickbacks.png
+Monday (Weeks 3-4),Prone Y-T-W Raises,reps,10,2,10,45,60,3,10 reps per letter shape; build back and shoulders,images/ytw_raises.png
+Monday (Weeks 3-4),Incline Wall Push-Ups,reps,10,3,10,60,60,2,Rebuild chest and triceps without joint overload,images/wall_pushups.png
+Monday (Weeks 3-4),Light Overhead Press,reps,8,3,10,60,90,2,Sit with back support; palms facing each other,images/overhead_press.png
+Wednesday (Weeks 3-4),Prone Y-T-W Raises,reps,10,2,10,45,60,3,10 reps per letter shape; build back and shoulders,images/ytw_raises.png
+Wednesday (Weeks 3-4),Incline Wall Push-Ups,reps,10,3,10,60,60,2,Rebuild chest and triceps without joint overload,images/wall_pushups.png
+Wednesday (Weeks 3-4),Light Overhead Press,reps,8,3,10,60,90,2,Sit with back support; palms facing each other,images/overhead_press.png
+Friday (Weeks 3-4),Prone Y-T-W Raises,reps,10,2,10,45,60,3,10 reps per letter shape; build back and shoulders,images/ytw_raises.png
+Friday (Weeks 3-4),Incline Wall Push-Ups,reps,10,3,10,60,60,2,Rebuild chest and triceps without joint overload,images/wall_pushups.png
+Friday (Weeks 3-4),Light Overhead Press,reps,8,3,10,60,90,2,Sit with back support; palms facing each other,images/overhead_press.png
