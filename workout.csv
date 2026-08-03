@@ -1,24 +1,22 @@
 day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,notes,image_url
-Monday,Dumbbell Bench Press (floor),reps,12,3,10,60,90,2,25-35 lbs each,images/Picture1.png
-Monday,Dumbbell Flyes (floor),reps,12,3,10,60,90,2,15-20 lbs each,images/Picture2.png
-Monday,Push-ups,reps,15,3,10,60,90,2,Bodyweight,images/Picture3.png
-Monday,Overhead Tricep Extension,reps,12,3,10,60,90,2,25-35 lbs (single DB),images/Picture4.png
-Monday,Tricep Kickbacks,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture5.png
-Monday,Close-Grip Dumbbell Press,reps,12,3,10,60,90,2,20-30 lbs each,images/Picture6.png
-Wednesday,Single-Arm Dumbbell Rows,reps,12,3,10,60,90,2,30-40 lbs (each side),images/Picture7.png
-Wednesday,Bent-Over Dumbbell Rows,reps,12,3,10,60,90,2,30-40 lbs each,images/Picture8.png
-Wednesday,Reverse Flyes,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture9.png
-Wednesday,Dumbbell Curls,reps,12,3,10,60,90,2,20-30 lbs each,images/Picture10.png
-Wednesday,Hammer Curls,reps,12,3,10,60,90,2,20-30 lbs each,images/Picture11.png
-Wednesday,Concentration Curls,reps,15,3,10,60,90,2,15-25 lbs,images/Picture12.png
-Friday,Dumbbell Shoulder Press,reps,12,3,10,60,90,2,20-30 lbs each,images/Picture13.png
-Friday,Lateral Raises,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture14.png
-Friday,Front Raises,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture15.png
-Friday,Dumbbell Curls (alternate grip),reps,12,3,10,60,90,2,20-30 lbs each,images/Picture16.png
-Friday,Overhead Tricep Extension,reps,12,3,10,60,90,2,25-35 lbs (single DB),images/Picture17.png
-Friday,Dumbbell Skull Crushers,reps,12,3,10,60,90,2,15-25 lbs each,images/Picture18.png
-day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,notes,image_url
-Monday,Dumbbell Bench Press (floor),reps,12,3,10,60,90,2,25-35 lbs each,images/Picture1.png
+#Monday,Dumbbell Bench Press (floor),reps,12,3,10,60,90,2,25-35 lbs each,images/Picture1.png
+#Monday,Dumbbell Flyes (floor),reps,12,3,10,60,90,2,15-20 lbs each,images/Picture2.png
+#Monday,Push-ups,reps,15,3,10,60,90,2,Bodyweight,images/Picture3.png
+#Monday,Overhead Tricep Extension,reps,12,3,10,60,90,2,25-35 lbs (single DB),images/Picture4.png
+#Monday,Tricep Kickbacks,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture5.png
+#Monday,Close-Grip Dumbbell Press,reps,12,3,10,60,90,2,20-30 lbs each,images/Picture6.png
+#Wednesday,Single-Arm Dumbbell Rows,reps,12,3,10,60,90,2,30-40 lbs (each side),images/Picture7.png
+#Wednesday,Bent-Over Dumbbell Rows,reps,12,3,10,60,90,2,30-40 lbs each,images/Picture8.png
+#Wednesday,Reverse Flyes,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture9.png
+#Wednesday,Dumbbell Curls,reps,12,3,10,60,90,2,20-30 lbs each,images/Picture10.png
+#Wednesday,Hammer Curls,reps,12,3,10,60,90,2,20-30 lbs each,images/Picture11.png
+#Wednesday,Concentration Curls,reps,15,3,10,60,90,2,15-25 lbs,images/Picture12.png
+#Friday,Dumbbell Shoulder Press,reps,12,3,10,60,90,2,20-30 lbs each,images/Picture13.png
+#Friday,Lateral Raises,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture14.png
+%Friday,Front Raises,reps,15,3,10,60,90,2,10-15 lbs each,images/Picture15.png
+#Friday,Dumbbell Curls (alternate grip),reps,12,3,10,60,90,2,20-30 lbs each,images/Picture16.png
+#Friday,Overhead Tricep Extension,reps,12,3,10,60,90,2,25-35 lbs (single DB),images/Picture17.png
+#Friday,Dumbbell Skull Crushers,reps,12,3,10,60,90,2,15-25 lbs each,images/Picture18.png
 Monday,Scapular Squeezes,reps,10,2,10,30,60,3,Hold 5 seconds at peak contraction,images/scapular_squeeze.png
 Monday,Band External Rotation,reps,10,3,10,45,60,2,Keep elbow tucked at 90-degree angle,images/band_rotation.png
 Monday,Wall Slides,reps,10,2,10,45,60,3,Slide slowly to activate shoulders safely,images/wall_slides.png
