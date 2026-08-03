@@ -198,7 +198,6 @@
             font-weight: 600;
         }
 
-        /* Notes Display Banner */
         .notes-box {
             background: rgba(245, 158, 11, 0.1);
             border: 1px solid rgba(245, 158, 11, 0.3);
@@ -263,6 +262,12 @@
             font-weight: 700;
             color: var(--accent-work);
         }
+
+        .status-msg {
+            font-size: 0.75rem;
+            color: var(--accent-work);
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -271,7 +276,7 @@
     <!-- SETUP SCREEN -->
     <div id="setup-screen" class="screen active">
         <h1>Workout Setup</h1>
-        <p class="subtitle">Edit or paste your CSV workout routine below</p>
+        <p class="subtitle">Edit or review your CSV workout routine</p>
         
         <div class="control-group">
             <label for="day-select">Select Day of Week:</label>
@@ -289,10 +294,11 @@
         <div class="control-group">
             <label for="csv-input">Routine CSV:</label>
             <textarea id="csv-input"></textarea>
+            <div id="status-msg" class="status-msg">Loading CSV from server...</div>
         </div>
 
         <button class="btn" onclick="startWorkout()">🚀 Start Workout</button>
-        <button class="btn btn-secondary" onclick="resetDefaultCSV()">Restore Sample CSV</button>
+        <button class="btn btn-secondary" onclick="reloadHostedCSV()">🔄 Reload Hosted CSV</button>
     </div>
 
     <!-- WORKOUT SCREEN -->
@@ -313,7 +319,6 @@
             <div id="sets-info" class="sets-info">Set 1 of 3</div>
         </div>
 
-        <!-- NEW: Notes Box -->
         <div id="notes-box" class="notes-box" style="display: none;">
             💡 <span id="notes-text"></span>
         </div>
@@ -359,17 +364,34 @@
 </div>
 
 <script>
-const DEFAULT_CSV = `day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,notes,image_url
-Monday,Push-ups,reps,12,3,10,30,45,3,Keep core tight and elbows at 45 degrees,https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&auto=format&fit=crop
-Monday,Plank Hold,time,45,3,10,30,60,0,Squeeze glutes and do not let hips sag,https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=400&auto=format&fit=crop
-Wednesday,Dumbbell Bicep Curls,reps,10,3,10,30,45,3,Use 25 lb dumbbells and control the descent,
-Wednesday,Jumping Jacks,time,30,2,5,15,30,0,Stay light on your toes,https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop
-All,Stretching Routine,time,60,1,5,0,0,0,Deep breaths in every pose,`;
+// Path to your hosted CSV file on the server / repository
+const HOSTED_CSV_PATH = 'workout.csv';
+
+// Fallback CSV in case offline or local file access limits fetch
+const DEFAULT_FALLBACK_CSV = `day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,notes,image_url
+Monday,Dumbbell Bench Press (floor),reps,12,3,10,60,90,3,25-35 lbs each,images/bench_press.jpg
+Monday,Dumbbell Flyes (floor),reps,12,3,10,60,90,3,15-20 lbs each,images/flyes.jpg
+Monday,Push-ups,reps,15,3,10,60,90,3,Bodyweight,images/pushups.jpg
+Monday,Overhead Tricep Extension,reps,12,3,10,60,90,3,25-35 lbs (single DB),images/tricep_ext.jpg
+Monday,Tricep Kickbacks,reps,15,3,10,60,90,3,10-15 lbs each,images/kickbacks.jpg
+Monday,Close-Grip Dumbbell Press,reps,12,3,10,60,90,3,20-30 lbs each,images/close_press.jpg
+Wednesday,Single-Arm Dumbbell Rows,reps,12,3,10,60,90,3,30-40 lbs (each side),images/single_row.jpg
+Wednesday,Bent-Over Dumbbell Rows,reps,12,3,10,60,90,3,30-40 lbs each,images/bent_row.jpg
+Wednesday,Reverse Flyes,reps,15,3,10,60,90,3,10-15 lbs each,images/reverse_flyes.jpg
+Wednesday,Dumbbell Curls,reps,12,3,10,60,90,3,20-30 lbs each,images/curls.jpg
+Wednesday,Hammer Curls,reps,12,3,10,60,90,3,20-30 lbs each,images/hammer_curls.jpg
+Wednesday,Concentration Curls,reps,15,3,10,60,90,3,15-25 lbs,images/concentration_curls.jpg
+Friday,Dumbbell Shoulder Press,reps,12,3,10,60,90,3,20-30 lbs each,images/shoulder_press.jpg
+Friday,Lateral Raises,reps,15,3,10,60,90,3,10-15 lbs each,images/lateral_raises.jpg
+Friday,Front Raises,reps,15,3,10,60,90,3,10-15 lbs each,images/front_raises.jpg
+Friday,Dumbbell Curls (alternate grip),reps,12,3,10,60,90,3,20-30 lbs each,images/alt_curls.jpg
+Friday,Overhead Tricep Extension,reps,12,3,10,60,90,3,25-35 lbs (single DB),images/tricep_ext.jpg
+Friday,Dumbbell Skull Crushers,reps,12,3,10,60,90,3,15-25 lbs each,images/skull_crushers.jpg`;
 
 let workoutData = [];
 let currentExIndex = 0;
 let currentSetIndex = 1;
-let currentPhase = 'PREP'; // PREP, WORK, REST_SET, REST_EX
+let currentPhase = 'PREP';
 let timer = null;
 let secondsLeft = 0;
 let currentRep = 0;
@@ -379,15 +401,35 @@ let totalWorkoutSeconds = 0;
 let workoutTimer = null;
 let wakeLock = null;
 
-// Automatically select today's day of the week on load
+// Set default day based on current date
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const todayName = daysOfWeek[new Date().getDay()];
 document.getElementById('day-select').value = todayName;
 
-document.getElementById('csv-input').value = DEFAULT_CSV;
+// Automatically fetch hosted CSV when the page loads
+window.addEventListener('DOMContentLoaded', () => {
+    reloadHostedCSV();
+});
 
-function resetDefaultCSV() {
-    document.getElementById('csv-input').value = DEFAULT_CSV;
+async function reloadHostedCSV() {
+    const statusMsg = document.getElementById('status-msg');
+    statusMsg.innerText = "Fetching latest CSV from server...";
+    statusMsg.style.color = "var(--accent-prep)";
+
+    try {
+        const response = await fetch(HOSTED_CSV_PATH + '?cacheBust=' + Date.now());
+        if (!response.ok) throw new Error("File not found on server");
+        
+        const csvText = await response.text();
+        document.getElementById('csv-input').value = csvText;
+        statusMsg.innerText = "Loaded latest CSV from server.";
+        statusMsg.style.color = "var(--accent-work)";
+    } catch (err) {
+        console.warn("Could not fetch hosted CSV, using fallback:", err);
+        document.getElementById('csv-input').value = DEFAULT_FALLBACK_CSV;
+        statusMsg.innerText = "Loaded fallback CSV (Hosted file not reached).";
+        statusMsg.style.color = "var(--text-sub)";
+    }
 }
 
 function speak(text) {
@@ -509,7 +551,6 @@ function setupPhase(phase) {
     document.getElementById('exercise-title').innerText = ex.name;
     document.getElementById('sets-info').innerText = `Set ${currentSetIndex} of ${ex.sets}`;
 
-    // Display Notes
     const notesBox = document.getElementById('notes-box');
     const notesText = document.getElementById('notes-text');
     if (ex.notes && ex.notes.trim() !== '') {
