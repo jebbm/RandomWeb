@@ -163,7 +163,7 @@
 
         .image-container {
             width: 100%;
-            height: 200px;
+            height: 180px;
             border-radius: 12px;
             background: #0f172a;
             overflow: hidden;
@@ -196,6 +196,21 @@
             color: var(--text-sub);
             font-size: 1rem;
             font-weight: 600;
+        }
+
+        /* Notes Display Banner */
+        .notes-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #fde047;
+            font-size: 0.9rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
         .timer-display {
@@ -298,6 +313,11 @@
             <div id="sets-info" class="sets-info">Set 1 of 3</div>
         </div>
 
+        <!-- NEW: Notes Box -->
+        <div id="notes-box" class="notes-box" style="display: none;">
+            💡 <span id="notes-text"></span>
+        </div>
+
         <div>
             <div id="main-display" class="timer-display">00:00</div>
             <div id="sub-display" class="timer-subtext">seconds remaining</div>
@@ -339,12 +359,12 @@
 </div>
 
 <script>
-const DEFAULT_CSV = `day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,image_url
-Monday,Push-ups,reps,12,3,10,30,45,3,https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&auto=format&fit=crop
-Monday,Plank Hold,time,45,3,10,30,60,0,https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=400&auto=format&fit=crop
-Wednesday,Bodyweight Squats,reps,15,3,10,30,45,3,
-Wednesday,Jumping Jacks,time,30,2,5,15,30,0,https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop
-All,Stretching Routine,time,60,1,5,0,0,0,`;
+const DEFAULT_CSV = `day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,notes,image_url
+Monday,Push-ups,reps,12,3,10,30,45,3,Keep core tight and elbows at 45 degrees,https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&auto=format&fit=crop
+Monday,Plank Hold,time,45,3,10,30,60,0,Squeeze glutes and do not let hips sag,https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=400&auto=format&fit=crop
+Wednesday,Dumbbell Bicep Curls,reps,10,3,10,30,45,3,Use 25 lb dumbbells and control the descent,
+Wednesday,Jumping Jacks,time,30,2,5,15,30,0,Stay light on your toes,https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop
+All,Stretching Routine,time,60,1,5,0,0,0,Deep breaths in every pose,`;
 
 let workoutData = [];
 let currentExIndex = 0;
@@ -413,7 +433,6 @@ function parseCSV(text, selectedDay) {
 
         const rowDay = row.day ? row.day.trim() : 'All';
 
-        // Filter: match selected day, or 'All', or comma-separated days (e.g. "Monday,Wednesday")
         const isMatchingDay = rowDay.toLowerCase() === 'all' || 
                               rowDay.toLowerCase() === selectedDay.toLowerCase() ||
                               rowDay.toLowerCase().split(';').includes(selectedDay.toLowerCase());
@@ -429,6 +448,7 @@ function parseCSV(text, selectedDay) {
                 rest_between_sets: parseInt(row.rest_between_sets) || 30,
                 rest_after_exercise: parseInt(row.rest_after_exercise) || 45,
                 rep_cadence: parseInt(row.rep_cadence) || 3,
+                notes: row.notes || '',
                 image_url: row.image_url || ''
             });
         }
@@ -489,6 +509,16 @@ function setupPhase(phase) {
     document.getElementById('exercise-title').innerText = ex.name;
     document.getElementById('sets-info').innerText = `Set ${currentSetIndex} of ${ex.sets}`;
 
+    // Display Notes
+    const notesBox = document.getElementById('notes-box');
+    const notesText = document.getElementById('notes-text');
+    if (ex.notes && ex.notes.trim() !== '') {
+        notesText.innerText = ex.notes;
+        notesBox.style.display = 'flex';
+    } else {
+        notesBox.style.display = 'none';
+    }
+
     const imgElem = document.getElementById('exercise-img');
     const placeholder = document.getElementById('image-placeholder');
     if (ex.image_url) {
@@ -509,7 +539,8 @@ function setupPhase(phase) {
         badge.style.background = "var(--accent-prep)";
         secondsLeft = ex.prep_time;
         subDisplay.innerText = "seconds until work";
-        speak(`Get ready for ${ex.name}`);
+        const noteSpeech = ex.notes ? `. Note: ${ex.notes}` : '';
+        speak(`Get ready for ${ex.name}${noteSpeech}`);
         updateNextPreview(`Up Next: Set ${currentSetIndex} of ${ex.name}`);
     } else if (phase === 'WORK') {
         badge.innerText = "WORK";
