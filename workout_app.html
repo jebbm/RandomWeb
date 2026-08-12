@@ -594,7 +594,7 @@ function setupPhase(phase) {
             currentRep = 1;
             cadenceTimerCount = 0;
             subDisplay.innerText = `Target: ${ex.target} Reps`;
-            speak(`Set ${currentSetIndex}. Do ${ex.target} ${ex.name}. 1`);
+            //speak(`Set ${currentSetIndex}. Do ${ex.target} ${ex.name}. 1`);
         }
         updateNextPreview(currentSetIndex < ex.sets ? "Next: Rest Between Sets" : "Next: Exercise Rest / Move On");
     } else if (phase === 'REST_SET') {
