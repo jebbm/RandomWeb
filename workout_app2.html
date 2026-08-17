@@ -1,0 +1,924 @@
+The updated code below includes both requested features:
+ * Interactive Cadence Controls: Simple − and + buttons on rep-based exercises to adjust the rep cadence live during the set, with the updated cadence speed clearly displayed.
+ * Estimated Time Remaining: A dynamic total workout timer in the top header that calculates remaining time based on all upcoming exercises, reps, preparation intervals, and rest periods.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CSV Workout Engine</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-prep: #f59e0b;
+            --accent-work: #10b981;
+            --accent-rest: #3b82f6;
+            --accent-finish: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-sub);
+            font-size: 0.9rem;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        textarea {
+            width: 100%;
+            height: 180px;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 0.82rem;
+            resize: vertical;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            user-select: none;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-work);
+            transition: width 0.3s linear;
+        }
+
+        .time-remaining-banner {
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            margin-top: -8px;
+        }
+
+        .phase-badge {
+            align-self: center;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            background: var(--accent-prep);
+            color: #000;
+        }
+
+        .image-container {
+            width: 100%;
+            height: 180px;
+            border-radius: 12px;
+            background: #0f172a;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-placeholder {
+            color: var(--text-sub);
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .exercise-title {
+            font-size: 1.6rem;
+            text-align: center;
+        }
+
+        .sets-info {
+            text-align: center;
+            color: var(--text-sub);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .notes-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #fde047;
+            font-size: 0.9rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .timer-display {
+            font-size: 4rem;
+            font-weight: 900;
+            text-align: center;
+            line-height: 1;
+            margin: 10px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer-subtext {
+            text-align: center;
+            color: var(--text-sub);
+            font-size: 0.9rem;
+        }
+
+        /* Cadence Control Bar */
+        .cadence-control-box {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            background: #0f172a;
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            margin-top: -6px;
+        }
+
+        .cadence-btn {
+            background: #334155;
+            color: #f8fafc;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cadence-btn:active {
+            background: #475569;
+        }
+
+        .cadence-label {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 10px;
+        }
+
+        .next-preview {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            text-align: center;
+            border: 1px dashed var(--border-color);
+        }
+
+        .stats-box {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1rem;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--accent-work);
+        }
+
+        .status-msg {
+            font-size: 0.75rem;
+            color: var(--accent-work);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="screen active">
+        <h1>Workout Setup</h1>
+        <p class="subtitle">Edit or review your CSV workout routine</p>
+        
+        <div class="control-group">
+            <label for="day-select">Select Day of Week:</label>
+            <select id="day-select">
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="csv-input">Routine CSV:</label>
+            <textarea id="csv-input"></textarea>
+            <div id="status-msg" class="status-msg">Loading CSV from server...</div>
+        </div>
+
+        <button class="btn" onclick="startWorkout()">🚀 Start Workout</button>
+        <button class="btn btn-secondary" onclick="reloadHostedCSV()">🔄 Reload Hosted CSV</button>
+    </div>
+
+    <!-- WORKOUT SCREEN -->
+    <div id="workout-screen" class="screen">
+        <div class="progress-bar-container">
+            <div id="overall-progress" class="progress-bar"></div>
+        </div>
+        
+        <div id="time-remaining-banner" class="time-remaining-banner">Est. Time Remaining: --:--</div>
+
+        <div id="phase-badge" class="phase-badge">GET READY</div>
+
+        <div class="image-container">
+            <img id="exercise-img" src="" alt="Exercise" style="display:none;">
+            <div id="image-placeholder" class="image-placeholder">No Image Available</div>
+        </div>
+
+        <div>
+            <h2 id="exercise-title" class="exercise-title">Pushups</h2>
+            <div id="sets-info" class="sets-info">Set 1 of 3</div>
+        </div>
+
+        <div id="notes-box" class="notes-box" style="display: none;">
+            💡 <span id="notes-text"></span>
+        </div>
+
+        <div>
+            <div id="main-display" class="timer-display">00:00</div>
+            <div id="sub-display" class="timer-subtext">seconds remaining</div>
+        </div>
+
+        <!-- Cadence Control Controls -->
+        <div id="cadence-control-box" class="cadence-control-box">
+            <button class="cadence-btn" onclick="adjustCadence(-1)">−</button>
+            <span id="cadence-label" class="cadence-label">Cadence: 3s / rep</span>
+            <button class="cadence-btn" onclick="adjustCadence(1)">+</button>
+        </div>
+
+        <div class="controls-grid">
+            <button class="btn btn-secondary" onclick="previousStep()">⏮</button>
+            <button id="pause-btn" class="btn" onclick="togglePause()">⏸ Pause</button>
+            <button class="btn btn-secondary" onclick="nextStep()">⏭</button>
+        </div>
+
+        <div id="next-preview" class="next-preview">Next: Rest</div>
+
+        <button class="btn btn-danger" style="padding: 10px; font-size: 0.9rem;" onclick="exitWorkout()">Quit Workout</button>
+    </div>
+
+    <!-- SUMMARY SCREEN -->
+    <div id="summary-screen" class="screen">
+        <h1>🎉 Workout Complete!</h1>
+        <p class="subtitle">Great job pushing through!</p>
+
+        <div class="stats-box">
+            <div class="stat-row">
+                <span>Total Time:</span>
+                <span id="stat-time" class="stat-value">00:00</span>
+            </div>
+            <div class="stat-row">
+                <span>Exercises Completed:</span>
+                <span id="stat-exercises" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Sets Completed:</span>
+                <span id="stat-sets" class="stat-value">0</span>
+            </div>
+        </div>
+
+        <button class="btn" onclick="showSetup()">Back to Main Menu</button>
+    </div>
+</div>
+
+<script>
+const HOSTED_CSV_PATH = 'workout.csv';
+
+const DEFAULT_FALLBACK_CSV = `day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,notes,image_url
+Monday,Dumbbell Bench Press (floor),reps,12,3,10,60,90,3,25-35 lbs each,images/bench_press.jpg
+Monday,Dumbbell Flyes (floor),reps,12,3,10,60,90,3,15-20 lbs each,images/flyes.jpg
+Monday,Push-ups,reps,15,3,10,60,90,3,Bodyweight,images/pushups.jpg
+Monday,Overhead Tricep Extension,reps,12,3,10,60,90,3,25-35 lbs (single DB),images/tricep_ext.jpg
+Monday,Tricep Kickbacks,reps,15,3,10,60,90,3,10-15 lbs each,images/kickbacks.jpg
+Monday,Close-Grip Dumbbell Press,reps,12,3,10,60,90,3,20-30 lbs each,images/close_press.jpg
+Wednesday,Single-Arm Dumbbell Rows,reps,12,3,10,60,90,3,30-40 lbs (each side),images/single_row.jpg
+Wednesday,Bent-Over Dumbbell Rows,reps,12,3,10,60,90,3,30-40 lbs each,images/bent_row.jpg
+Wednesday,Reverse Flyes,reps,15,3,10,60,90,3,10-15 lbs each,images/reverse_flyes.jpg
+Wednesday,Dumbbell Curls,reps,12,3,10,60,90,3,20-30 lbs each,images/curls.jpg
+Wednesday,Hammer Curls,reps,12,3,10,60,90,3,20-30 lbs each,images/hammer_curls.jpg
+Wednesday,Concentration Curls,reps,15,3,10,60,90,3,15-25 lbs,images/concentration_curls.jpg
+Friday,Dumbbell Shoulder Press,reps,12,3,10,60,90,3,20-30 lbs each,images/shoulder_press.jpg
+Friday,Lateral Raises,reps,15,3,10,60,90,3,10-15 lbs each,images/lateral_raises.jpg
+Friday,Front Raises,reps,15,3,10,60,90,3,10-15 lbs each,images/front_raises.jpg
+Friday,Dumbbell Curls (alternate grip),reps,12,3,10,60,90,3,20-30 lbs each,images/alt_curls.jpg
+Friday,Overhead Tricep Extension,reps,12,3,10,60,90,3,25-35 lbs (single DB),images/tricep_ext.jpg
+Friday,Dumbbell Skull Crushers,reps,12,3,10,60,90,3,15-25 lbs each,images/skull_crushers.jpg`;
+
+let workoutData = [];
+let currentExIndex = 0;
+let currentSetIndex = 1;
+let currentPhase = 'PREP';
+let timer = null;
+let secondsLeft = 0;
+let currentRep = 0;
+let cadenceTimerCount = 0;
+let isPaused = false;
+let totalWorkoutSeconds = 0;
+let workoutTimer = null;
+let wakeLock = null;
+
+const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const todayName = daysOfWeek[new Date().getDay()];
+document.getElementById('day-select').value = todayName;
+
+window.addEventListener('DOMContentLoaded', () => {
+    reloadHostedCSV();
+});
+
+async function reloadHostedCSV() {
+    const statusMsg = document.getElementById('status-msg');
+    statusMsg.innerText = "Fetching latest CSV from server...";
+    statusMsg.style.color = "var(--accent-prep)";
+
+    try {
+        const response = await fetch(HOSTED_CSV_PATH + '?cacheBust=' + Date.now());
+        if (!response.ok) throw new Error("File not found on server");
+        
+        const csvText = await response.text();
+        document.getElementById('csv-input').value = csvText;
+        statusMsg.innerText = "Loaded latest CSV from server.";
+        statusMsg.style.color = "var(--accent-work)";
+    } catch (err) {
+        console.warn("Could not fetch hosted CSV, using fallback:", err);
+        document.getElementById('csv-input').value = DEFAULT_FALLBACK_CSV;
+        statusMsg.innerText = "Loaded fallback CSV (Hosted file not reached).";
+        statusMsg.style.color = "var(--text-sub)";
+    }
+}
+
+function speak(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+        }
+    } catch (err) {
+        console.log("Wake Lock error:", err);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+    }
+}
+
+function parseCSV(text, selectedDay) {
+    const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const data = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim());
+        const row = {};
+        headers.forEach((h, idx) => {
+            row[h] = cols[idx] !== undefined ? cols[idx] : '';
+        });
+
+        const rowDay = row.day ? row.day.trim() : 'All';
+
+        const isMatchingDay = rowDay.toLowerCase() === 'all' || 
+                              rowDay.toLowerCase() === selectedDay.toLowerCase() ||
+                              rowDay.toLowerCase().split(';').includes(selectedDay.toLowerCase());
+
+        if (isMatchingDay) {
+            data.push({
+                day: rowDay,
+                name: row.name || 'Exercise',
+                type: row.type === 'time' ? 'time' : 'reps',
+                target: parseInt(row.target) || 10,
+                sets: parseInt(row.sets) || 1,
+                prep_time: parseInt(row.prep_time) || 5,
+                rest_between_sets: parseInt(row.rest_between_sets) || 30,
+                rest_after_exercise: parseInt(row.rest_after_exercise) || 45,
+                rep_cadence: parseInt(row.rep_cadence) || 3,
+                notes: row.notes || '',
+                image_url: row.image_url || ''
+            });
+        }
+    }
+    return data;
+}
+
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+}
+
+function startWorkout() {
+    const csvContent = document.getElementById('csv-input').value;
+    const selectedDay = document.getElementById('day-select').value;
+    
+    workoutData = parseCSV(csvContent, selectedDay);
+
+    if (workoutData.length === 0) {
+        alert(`No exercises found for ${selectedDay}. Check your CSV day column.`);
+        return;
+    }
+
+    currentExIndex = 0;
+    currentSetIndex = 1;
+    totalWorkoutSeconds = 0;
+    isPaused = false;
+
+    speak(`Starting ${selectedDay} workout. Get ready.`);
+    requestWakeLock();
+
+    showScreen('workout-screen');
+
+    clearInterval(workoutTimer);
+    workoutTimer = setInterval(() => {
+        if (!isPaused) totalWorkoutSeconds++;
+    }, 1000);
+
+    setupPhase('PREP');
+}
+
+function exitWorkout() {
+    clearInterval(timer);
+    clearInterval(workoutTimer);
+    releaseWakeLock();
+    showSetup();
+}
+
+function showSetup() {
+    showScreen('setup-screen');
+}
+
+function adjustCadence(delta) {
+    const ex = workoutData[currentExIndex];
+    if (!ex || ex.type !== 'reps') return;
+
+    ex.rep_cadence = Math.max(1, (ex.rep_cadence || 3) + delta);
+    updateCadenceUI();
+    updateTimeRemainingDisplay();
+}
+
+function updateCadenceUI() {
+    const ex = workoutData[currentExIndex];
+    const cadenceBox = document.getElementById('cadence-control-box');
+    
+    if (currentPhase === 'WORK' && ex.type === 'reps') {
+        cadenceBox.style.display = 'flex';
+        document.getElementById('cadence-label').innerText = `Cadence: ${ex.rep_cadence}s / rep`;
+    } else {
+        cadenceBox.style.display = 'none';
+    }
+}
+
+function setupPhase(phase) {
+    clearInterval(timer);
+    currentPhase = phase;
+    const ex = workoutData[currentExIndex];
+
+    document.getElementById('exercise-title').innerText = ex.name;
+    document.getElementById('sets-info').innerText = `Set ${currentSetIndex} of ${ex.sets}`;
+
+    const notesBox = document.getElementById('notes-box');
+    const notesText = document.getElementById('notes-text');
+    if (ex.notes && ex.notes.trim() !== '') {
+        notesText.innerText = ex.notes;
+        notesBox.style.display = 'flex';
+    } else {
+        notesBox.style.display = 'none';
+    }
+
+    const imgElem = document.getElementById('exercise-img');
+    const placeholder = document.getElementById('image-placeholder');
+    if (ex.image_url) {
+        imgElem.src = ex.image_url;
+        imgElem.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        imgElem.style.display = 'none';
+        placeholder.style.display = 'block';
+        placeholder.innerText = ex.name;
+    }
+
+    const badge = document.getElementById('phase-badge');
+    const subDisplay = document.getElementById('sub-display');
+
+    if (phase === 'PREP') {
+        badge.innerText = "GET READY";
+        badge.style.background = "var(--accent-prep)";
+        secondsLeft = ex.prep_time;
+        subDisplay.innerText = "seconds until work";
+        const noteSpeech = ex.notes ? `. Note: ${ex.notes}` : '';
+        speak(`Get ready for ${ex.name}${noteSpeech}`);
+        updateNextPreview(`Up Next: Set ${currentSetIndex} of ${ex.name}`);
+    } else if (phase === 'WORK') {
+        badge.innerText = "WORK";
+        badge.style.background = "var(--accent-work)";
+        if (ex.type === 'time') {
+            secondsLeft = ex.target;
+            subDisplay.innerText = "seconds remaining";
+            speak(`Begin ${ex.name}, ${ex.target} seconds`);
+        } else {
+            currentRep = 1;
+            cadenceTimerCount = 0;
+            subDisplay.innerText = `Target: ${ex.target} Reps`;
+        }
+        updateNextPreview(currentSetIndex < ex.sets ? "Next: Rest Between Sets" : "Next: Exercise Rest / Move On");
+    } else if (phase === 'REST_SET') {
+        badge.innerText = "REST";
+        badge.style.background = "var(--accent-rest)";
+        secondsLeft = ex.rest_between_sets;
+        subDisplay.innerText = "seconds rest";
+        speak(`Rest for ${secondsLeft} seconds`);
+        updateNextPreview(`Up Next: Set ${currentSetIndex + 1} of ${ex.name}`);
+    } else if (phase === 'REST_EX') {
+        badge.innerText = "REST & TRANSITION";
+        badge.style.background = "var(--accent-finish)";
+        secondsLeft = ex.rest_after_exercise;
+        subDisplay.innerText = "seconds rest before next exercise";
+        const nextEx = workoutData[currentExIndex + 1];
+        speak(`Great set. Rest for ${secondsLeft} seconds. Next is ${nextEx ? nextEx.name : 'Finish'}`);
+        updateNextPreview(nextEx ? `Up Next: ${nextEx.name}` : "Up Next: Workout Complete");
+    }
+
+    updateCadenceUI();
+    updateOverallProgress();
+    updateTimeRemainingDisplay();
+    renderDisplay();
+    runTimerLogic();
+}
+
+function renderDisplay() {
+    const mainDisplay = document.getElementById('main-display');
+    const ex = workoutData[currentExIndex];
+
+    if (currentPhase === 'WORK' && ex.type === 'reps') {
+        mainDisplay.innerText = `${currentRep} / ${ex.target}`;
+    } else {
+        const mins = Math.floor(secondsLeft / 60);
+        const secs = secondsLeft % 60;
+        mainDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+}
+
+function updateNextPreview(text) {
+    document.getElementById('next-preview').innerText = text;
+}
+
+function calculateRemainingSeconds() {
+    let remaining = 0;
+
+    // Current phase time left
+    const curEx = workoutData[currentExIndex];
+    if (curEx) {
+        if (currentPhase === 'PREP') {
+            remaining += secondsLeft;
+            // Add remaining sets for current exercise
+            for (let s = currentSetIndex; s <= curEx.sets; s++) {
+                remaining += curEx.type === 'time' ? curEx.target : (curEx.target * curEx.rep_cadence);
+                if (s < curEx.sets) remaining += curEx.rest_between_sets;
+            }
+            remaining += curEx.rest_after_exercise;
+        } else if (currentPhase === 'WORK') {
+            if (curEx.type === 'time') {
+                remaining += secondsLeft;
+            } else {
+                const repsRemaining = (curEx.target - currentRep) + 1;
+                remaining += (repsRemaining * curEx.rep_cadence) - cadenceTimerCount;
+            }
+            // Add rest and remaining sets
+            if (currentSetIndex < curEx.sets) remaining += curEx.rest_between_sets;
+            for (let s = currentSetIndex + 1; s <= curEx.sets; s++) {
+                remaining += curEx.type === 'time' ? curEx.target : (curEx.target * curEx.rep_cadence);
+                if (s < curEx.sets) remaining += curEx.rest_between_sets;
+            }
+            remaining += curEx.rest_after_exercise;
+        } else if (currentPhase === 'REST_SET') {
+            remaining += secondsLeft;
+            for (let s = currentSetIndex + 1; s <= curEx.sets; s++) {
+                remaining += curEx.type === 'time' ? curEx.target : (curEx.target * curEx.rep_cadence);
+                if (s < curEx.sets) remaining += curEx.rest_between_sets;
+            }
+            remaining += curEx.rest_after_exercise;
+        } else if (currentPhase === 'REST_EX') {
+            remaining += secondsLeft;
+        }
+    }
+
+    // Future exercises
+    for (let i = currentExIndex + 1; i < workoutData.length; i++) {
+        const ex = workoutData[i];
+        remaining += ex.prep_time;
+        for (let s = 1; s <= ex.sets; s++) {
+            remaining += ex.type === 'time' ? ex.target : (ex.target * ex.rep_cadence);
+            if (s < ex.sets) remaining += ex.rest_between_sets;
+        }
+        if (i < workoutData.length - 1) {
+            remaining += ex.rest_after_exercise;
+        }
+    }
+
+    return Math.max(0, remaining);
+}
+
+function updateTimeRemainingDisplay() {
+    const totalRemaining = calculateRemainingSeconds();
+    const mins = Math.floor(totalRemaining / 60);
+    const secs = totalRemaining % 60;
+    document.getElementById('time-remaining-banner').innerText = 
+        `Est. Time Remaining: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function runTimerLogic() {
+    const ex = workoutData[currentExIndex];
+
+    timer = setInterval(() => {
+        if (isPaused) return;
+
+        updateTimeRemainingDisplay();
+
+        if (currentPhase === 'WORK' && ex.type === 'reps') {
+            const cadence = ex.rep_cadence > 0 ? ex.rep_cadence : 3;
+            cadenceTimerCount++;
+
+            if (cadenceTimerCount >= cadence) {
+                cadenceTimerCount = 0;
+                if (currentRep < ex.target) {
+                    currentRep++;
+                    renderDisplay();
+                    speak(currentRep.toString());
+                } else {
+                    advanceAfterWorkPhase();
+                }
+            }
+            return;
+        }
+
+        if (secondsLeft > 0) {
+            secondsLeft--;
+            renderDisplay();
+
+            if (secondsLeft <= 3 && secondsLeft > 0) {
+                speak(secondsLeft.toString());
+            }
+        } else {
+            if (currentPhase === 'PREP') {
+                setupPhase('WORK');
+            } else if (currentPhase === 'WORK') {
+                advanceAfterWorkPhase();
+            } else if (currentPhase === 'REST_SET') {
+                currentSetIndex++;
+                setupPhase('WORK');
+            } else if (currentPhase === 'REST_EX') {
+                currentExIndex++;
+                currentSetIndex = 1;
+                setupPhase('PREP');
+            }
+        }
+    }, 1000);
+}
+
+function advanceAfterWorkPhase() {
+    const ex = workoutData[currentExIndex];
+    if (currentSetIndex < ex.sets) {
+        setupPhase('REST_SET');
+    } else {
+        if (currentExIndex < workoutData.length - 1) {
+            setupPhase('REST_EX');
+        } else {
+            finishWorkout();
+        }
+    }
+}
+
+function nextStep() {
+    if (currentPhase === 'WORK') {
+        advanceAfterWorkPhase();
+    } else if (currentPhase === 'REST_SET') {
+        currentSetIndex++;
+        setupPhase('WORK');
+    } else if (currentPhase === 'REST_EX') {
+        currentExIndex++;
+        currentSetIndex = 1;
+        setupPhase('PREP');
+    } else if (currentPhase === 'PREP') {
+        setupPhase('WORK');
+    }
+}
+
+function previousStep() {
+    if (currentPhase === 'REST_SET' || currentPhase === 'WORK') {
+        setupPhase('PREP');
+    } else if (currentExIndex > 0) {
+        currentExIndex--;
+        currentSetIndex = 1;
+        setupPhase('PREP');
+    }
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    const btn = document.getElementById('pause-btn');
+    if (isPaused) {
+        btn.innerText = "▶ Resume";
+        btn.classList.add('btn-secondary');
+        speak("Paused");
+    } else {
+        btn.innerText = "⏸ Pause";
+        btn.classList.remove('btn-secondary');
+        speak("Resuming");
+    }
+}
+
+function updateOverallProgress() {
+    let totalPhases = 0;
+    let completedPhases = 0;
+
+    workoutData.forEach((ex, idx) => {
+        const totalSets = ex.sets;
+        for (let s = 1; s <= totalSets; s++) {
+            totalPhases++;
+            if (s < totalSets) totalPhases++;
+        }
+        if (idx < workoutData.length - 1) totalPhases++;
+    });
+
+    for (let i = 0; i < currentExIndex; i++) {
+        const ex = workoutData[i];
+        completedPhases += (ex.sets * 2);
+    }
+    completedPhases += (currentSetIndex - 1) * 2;
+    if (currentPhase === 'WORK') completedPhases += 0.5;
+    if (currentPhase === 'REST_SET' || currentPhase === 'REST_EX') completedPhases += 1;
+
+    const percentage = Math.min(100, Math.max(0, (completedPhases / totalPhases) * 100));
+    document.getElementById('overall-progress').style.width = `${percentage}%`;
+}
+
+function finishWorkout() {
+    clearInterval(timer);
+    clearInterval(workoutTimer);
+    releaseWakeLock();
+
+    let totalSets = 0;
+    workoutData.forEach(ex => totalSets += ex.sets);
+
+    const mins = Math.floor(totalWorkoutSeconds / 60);
+    const secs = totalWorkoutSeconds % 60;
+    document.getElementById('stat-time').innerText = `${mins}m ${secs}s`;
+    document.getElementById('stat-exercises').innerText = workoutData.length;
+    document.getElementById('stat-sets').innerText = totalSets;
+
+    speak("Congratulations! You have completed your workout!");
+    showScreen('summary-screen');
+}
+</script>
+</body>
+</html>
+
