@@ -1,6 +1,3 @@
-The updated code below includes both requested features:
- * Interactive Cadence Controls: Simple − and + buttons on rep-based exercises to adjust the rep cadence live during the set, with the updated cadence speed clearly displayed.
- * Estimated Time Remaining: A dynamic total workout timer in the top header that calculates remaining time based on all upcoming exercises, reps, preparation intervals, and rest periods.
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -238,7 +235,6 @@ The updated code below includes both requested features:
             font-size: 0.9rem;
         }
 
-        /* Cadence Control Bar */
         .cadence-control-box {
             display: none;
             align-items: center;
@@ -254,7 +250,7 @@ The updated code below includes both requested features:
             background: #334155;
             color: #f8fafc;
             border: none;
-            width: 36px;
+            width: 44px;
             height: 36px;
             border-radius: 8px;
             font-size: 1.2rem;
@@ -270,7 +266,7 @@ The updated code below includes both requested features:
         }
 
         .cadence-label {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: var(--text-sub);
             font-weight: 600;
         }
@@ -354,7 +350,7 @@ The updated code below includes both requested features:
         <div class="progress-bar-container">
             <div id="overall-progress" class="progress-bar"></div>
         </div>
-        
+
         <div id="time-remaining-banner" class="time-remaining-banner">Est. Time Remaining: --:--</div>
 
         <div id="phase-badge" class="phase-badge">GET READY</div>
@@ -378,11 +374,11 @@ The updated code below includes both requested features:
             <div id="sub-display" class="timer-subtext">seconds remaining</div>
         </div>
 
-        <!-- Cadence Control Controls -->
+        <!-- Cadence Control Controls (+/- 0.5s) -->
         <div id="cadence-control-box" class="cadence-control-box">
-            <button class="cadence-btn" onclick="adjustCadence(-1)">−</button>
+            <button class="cadence-btn" onclick="adjustCadence(-0.5)">− 0.5s</button>
             <span id="cadence-label" class="cadence-label">Cadence: 3s / rep</span>
-            <button class="cadence-btn" onclick="adjustCadence(1)">+</button>
+            <button class="cadence-btn" onclick="adjustCadence(0.5)">+ 0.5s</button>
         </div>
 
         <div class="controls-grid">
@@ -455,6 +451,7 @@ let isPaused = false;
 let totalWorkoutSeconds = 0;
 let workoutTimer = null;
 let wakeLock = null;
+let lastSpokenSecond = -1;
 
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const todayName = daysOfWeek[new Date().getDay()];
@@ -539,10 +536,10 @@ function parseCSV(text, selectedDay) {
                 type: row.type === 'time' ? 'time' : 'reps',
                 target: parseInt(row.target) || 10,
                 sets: parseInt(row.sets) || 1,
-                prep_time: parseInt(row.prep_time) || 5,
-                rest_between_sets: parseInt(row.rest_between_sets) || 30,
-                rest_after_exercise: parseInt(row.rest_after_exercise) || 45,
-                rep_cadence: parseInt(row.rep_cadence) || 3,
+                prep_time: parseFloat(row.prep_time) || 5,
+                rest_between_sets: parseFloat(row.rest_between_sets) || 30,
+                rest_after_exercise: parseFloat(row.rest_after_exercise) || 45,
+                rep_cadence: parseFloat(row.rep_cadence) || 3,
                 notes: row.notes || '',
                 image_url: row.image_url || ''
             });
@@ -600,7 +597,7 @@ function adjustCadence(delta) {
     const ex = workoutData[currentExIndex];
     if (!ex || ex.type !== 'reps') return;
 
-    ex.rep_cadence = Math.max(1, (ex.rep_cadence || 3) + delta);
+    ex.rep_cadence = Math.max(0.5, Math.round(((ex.rep_cadence || 3) + delta) * 10) / 10);
     updateCadenceUI();
     updateTimeRemainingDisplay();
 }
@@ -611,7 +608,8 @@ function updateCadenceUI() {
     
     if (currentPhase === 'WORK' && ex.type === 'reps') {
         cadenceBox.style.display = 'flex';
-        document.getElementById('cadence-label').innerText = `Cadence: ${ex.rep_cadence}s / rep`;
+        const formattedCadence = Number(ex.rep_cadence.toFixed(1));
+        document.getElementById('cadence-label').innerText = `Cadence: ${formattedCadence}s / rep`;
     } else {
         cadenceBox.style.display = 'none';
     }
@@ -621,6 +619,7 @@ function setupPhase(phase) {
     clearInterval(timer);
     currentPhase = phase;
     const ex = workoutData[currentExIndex];
+    lastSpokenSecond = -1;
 
     document.getElementById('exercise-title').innerText = ex.name;
     document.getElementById('sets-info').innerText = `Set ${currentSetIndex} of ${ex.sets}`;
@@ -668,6 +667,7 @@ function setupPhase(phase) {
             currentRep = 1;
             cadenceTimerCount = 0;
             subDisplay.innerText = `Target: ${ex.target} Reps`;
+            speak(`Set ${currentSetIndex}. Do ${ex.target} ${ex.name}. 1`);
         }
         updateNextPreview(currentSetIndex < ex.sets ? "Next: Rest Between Sets" : "Next: Exercise Rest / Move On");
     } else if (phase === 'REST_SET') {
@@ -675,7 +675,7 @@ function setupPhase(phase) {
         badge.style.background = "var(--accent-rest)";
         secondsLeft = ex.rest_between_sets;
         subDisplay.innerText = "seconds rest";
-        speak(`Rest for ${secondsLeft} seconds`);
+        speak(`Rest for ${Math.round(secondsLeft)} seconds`);
         updateNextPreview(`Up Next: Set ${currentSetIndex + 1} of ${ex.name}`);
     } else if (phase === 'REST_EX') {
         badge.innerText = "REST & TRANSITION";
@@ -683,7 +683,7 @@ function setupPhase(phase) {
         secondsLeft = ex.rest_after_exercise;
         subDisplay.innerText = "seconds rest before next exercise";
         const nextEx = workoutData[currentExIndex + 1];
-        speak(`Great set. Rest for ${secondsLeft} seconds. Next is ${nextEx ? nextEx.name : 'Finish'}`);
+        speak(`Great set. Rest for ${Math.round(secondsLeft)} seconds. Next is ${nextEx ? nextEx.name : 'Finish'}`);
         updateNextPreview(nextEx ? `Up Next: ${nextEx.name}` : "Up Next: Workout Complete");
     }
 
@@ -701,8 +701,9 @@ function renderDisplay() {
     if (currentPhase === 'WORK' && ex.type === 'reps') {
         mainDisplay.innerText = `${currentRep} / ${ex.target}`;
     } else {
-        const mins = Math.floor(secondsLeft / 60);
-        const secs = secondsLeft % 60;
+        const totalSecs = Math.ceil(secondsLeft);
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
         mainDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 }
@@ -713,13 +714,11 @@ function updateNextPreview(text) {
 
 function calculateRemainingSeconds() {
     let remaining = 0;
-
-    // Current phase time left
     const curEx = workoutData[currentExIndex];
+
     if (curEx) {
         if (currentPhase === 'PREP') {
             remaining += secondsLeft;
-            // Add remaining sets for current exercise
             for (let s = currentSetIndex; s <= curEx.sets; s++) {
                 remaining += curEx.type === 'time' ? curEx.target : (curEx.target * curEx.rep_cadence);
                 if (s < curEx.sets) remaining += curEx.rest_between_sets;
@@ -732,7 +731,6 @@ function calculateRemainingSeconds() {
                 const repsRemaining = (curEx.target - currentRep) + 1;
                 remaining += (repsRemaining * curEx.rep_cadence) - cadenceTimerCount;
             }
-            // Add rest and remaining sets
             if (currentSetIndex < curEx.sets) remaining += curEx.rest_between_sets;
             for (let s = currentSetIndex + 1; s <= curEx.sets; s++) {
                 remaining += curEx.type === 'time' ? curEx.target : (curEx.target * curEx.rep_cadence);
@@ -751,7 +749,6 @@ function calculateRemainingSeconds() {
         }
     }
 
-    // Future exercises
     for (let i = currentExIndex + 1; i < workoutData.length; i++) {
         const ex = workoutData[i];
         remaining += ex.prep_time;
@@ -768,7 +765,7 @@ function calculateRemainingSeconds() {
 }
 
 function updateTimeRemainingDisplay() {
-    const totalRemaining = calculateRemainingSeconds();
+    const totalRemaining = Math.ceil(calculateRemainingSeconds());
     const mins = Math.floor(totalRemaining / 60);
     const secs = totalRemaining % 60;
     document.getElementById('time-remaining-banner').innerText = 
@@ -777,6 +774,7 @@ function updateTimeRemainingDisplay() {
 
 function runTimerLogic() {
     const ex = workoutData[currentExIndex];
+    const TICK_MS = 100; // 100ms precision tick engine for smooth sub-second cadences
 
     timer = setInterval(() => {
         if (isPaused) return;
@@ -785,10 +783,10 @@ function runTimerLogic() {
 
         if (currentPhase === 'WORK' && ex.type === 'reps') {
             const cadence = ex.rep_cadence > 0 ? ex.rep_cadence : 3;
-            cadenceTimerCount++;
+            cadenceTimerCount += (TICK_MS / 1000);
 
             if (cadenceTimerCount >= cadence) {
-                cadenceTimerCount = 0;
+                cadenceTimerCount -= cadence;
                 if (currentRep < ex.target) {
                     currentRep++;
                     renderDisplay();
@@ -801,11 +799,13 @@ function runTimerLogic() {
         }
 
         if (secondsLeft > 0) {
-            secondsLeft--;
+            secondsLeft -= (TICK_MS / 1000);
             renderDisplay();
 
-            if (secondsLeft <= 3 && secondsLeft > 0) {
-                speak(secondsLeft.toString());
+            const wholeSec = Math.ceil(secondsLeft);
+            if (wholeSec <= 3 && wholeSec > 0 && wholeSec !== lastSpokenSecond) {
+                lastSpokenSecond = wholeSec;
+                speak(wholeSec.toString());
             }
         } else {
             if (currentPhase === 'PREP') {
@@ -821,7 +821,7 @@ function runTimerLogic() {
                 setupPhase('PREP');
             }
         }
-    }, 1000);
+    }, TICK_MS);
 }
 
 function advanceAfterWorkPhase() {
@@ -921,4 +921,3 @@ function finishWorkout() {
 </script>
 </body>
 </html>
-
