@@ -336,10 +336,15 @@
         </div>
 
         <div class="control-group">
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color: var(--text-main); font-size: 1rem;">
-                <input type="checkbox" id="movie-mode" style="width:20px; height:20px; accent-color:#10b981;">
-                Movie mode &mdash; visual prompts only, won't pause a movie
-            </label>
+            <label for="audio-mode">Audio prompts:</label>
+            <select id="audio-mode">
+                <option value="voice">Voice &mdash; spoken prompts (plays over a movie)</option>
+                <option value="tones">Tones &mdash; short beeps</option>
+                <option value="silent">Movie mode &mdash; visual only, no sound</option>
+            </select>
+            <div style="font-size:0.85rem; color: var(--text-sub);">Voice uses pre-recorded clips played through the app's audio, not the system voice &mdash; that's what lets it play over a movie on visionOS 27. Tones are the most reliable if Voice ever goes quiet.</div>
+            <button class="btn btn-secondary" style="padding:10px; font-size:0.9rem;" onclick="testAudio()">Test audio with your movie playing</button>
+            <div id="audio-test-status" class="status-msg"></div>
         </div>
 
         <div class="control-group">
@@ -462,8 +467,21 @@ let lastSpokenSecond = -1;
 let audioCtx = null;
 let lastTickTime = 0;
 let audioKeepAliveTimer = null;
-let movieMode = false;
-try { movieMode = localStorage.getItem('workoutMovieMode') === '1'; } catch (err) {}
+// Audio modes: 'voice' = pre-recorded voice clips played through the
+// AudioContext (the media path, so they can play over a movie on
+// visionOS 27 - system speechSynthesis cannot, it pauses other audio
+// or goes silent when another app is playing); 'tones' = short beeps;
+// 'silent' = Movie mode, visual prompts only.
+let audioMode = 'voice';
+try {
+    const savedMode = localStorage.getItem('workoutAudioMode');
+    if (savedMode === 'voice' || savedMode === 'tones' || savedMode === 'silent') audioMode = savedMode;
+    else if (localStorage.getItem('workoutMovieMode') === '1') audioMode = 'silent';
+} catch (err) {}
+let voiceClips = null; // slug -> AudioBuffer, decoded on first Voice use
+let voiceClipsLoading = null;
+let voicePlayToken = 0;
+let currentVoiceSource = null;
 
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const todayName = daysOfWeek[new Date().getDay()];
@@ -471,12 +489,13 @@ document.getElementById('day-select').value = todayName;
 
 window.addEventListener('DOMContentLoaded', () => {
     reloadHostedCSV();
-    const mm = document.getElementById('movie-mode');
-    if (mm) {
-        mm.checked = movieMode;
-        mm.addEventListener('change', () => {
-            movieMode = mm.checked;
-            try { localStorage.setItem('workoutMovieMode', movieMode ? '1' : '0'); } catch (err) {}
+    const am = document.getElementById('audio-mode');
+    if (am) {
+        am.value = audioMode;
+        am.addEventListener('change', () => {
+            audioMode = am.value;
+            try { localStorage.setItem('workoutAudioMode', audioMode); } catch (err) {}
+            if (audioMode === 'voice') { initAmbientAudio(); loadVoiceClips(); }
         });
     }
 });
@@ -624,19 +643,175 @@ function playFinishFanfare() {
     });
 }
 
-// Completely replaces TTS speech with Web Audio chimes
-function speak(text) {
-    // Movie mode: visual prompts only, guaranteed not to pause a movie.
-    if (movieMode) return;
-    setTransientSession();
-    if (text === null || text === undefined) return;
-    const strText = String(text).trim().toLowerCase();
+// --- Voice prompts: pre-recorded clips through the AudioContext ---
+// System speechSynthesis is routed as system speech on visionOS 27:
+// it pauses a movie, or goes silent while a movie plays. Playing voice
+// audio bytes through audioCtx.destination is the media path, the same
+// one the beeps already use, so it can play over a movie. Clips live in
+// audio-clips.js (base64 MP3s, loaded lazily on first Voice use).
+const EXERCISE_CLIP_SLUGS = {
+    "PT Stretch and Glide": "stretch-glide",
+    "Shoulder External Rotation - Band": "external-rotation",
+    "Goblet Squat": "goblet-squat",
+    "Dumbbell Bench Press (floor)": "bench-press",
+    "Single-Arm Dumbbell Rows": "single-arm-rows",
+    "Dumbbell Romanian Deadlift": "romanian-deadlift",
+    "Standing Shoulder Flexion to 90 Degrees - Light DB": "flexion-90",
+    "Standing Shoulder Abduction Slides at Wall": "wall-slides",
+    "Dumbbell Reverse Lunge": "reverse-lunge",
+    "Dumbbell Flyes (floor)": "flyes",
+    "Bent-Over Dumbbell Rows": "bent-over-rows",
+    "Standing Dumbbell Calf Raises": "calf-raises",
+    "Shoulder Internal Rotation - Band": "internal-rotation",
+    "Prone Single-Arm Shoulder Y": "prone-y",
+    "Dumbbell Sumo Squat": "sumo-squat",
+    "Close-Grip Dumbbell Press": "close-grip-press",
+    "Reverse Flyes": "reverse-flyes",
+    "Single-Leg Romanian Deadlift": "single-leg-rdl",
+    "Standing Shoulder Shrugs - Light DB": "shrugs",
+    "Cycle Warm-up": "cycle-warmup",
+    "Cycle Climb 1": "cycle-climb-1",
+    "Cycle Tempo": "cycle-tempo",
+    "Cycle Climb 2": "cycle-climb-2",
+    "Cycle Climb 3": "cycle-climb-3",
+    "Cycle Cool-down": "cycle-cooldown"
+};
 
-    if (!isNaN(strText) && strText !== '') {
-        playCadenceBeep();
-        return;
+function exerciseClipSlug(name) {
+    if (!name) return null;
+    const lower = String(name).trim().toLowerCase();
+    for (const key in EXERCISE_CLIP_SLUGS) {
+        if (key.toLowerCase() === lower) return EXERCISE_CLIP_SLUGS[key];
     }
+    return null;
+}
 
+function base64ToArrayBuffer(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function loadVoiceClips() {
+    if (voiceClips) return Promise.resolve(voiceClips);
+    if (voiceClipsLoading) return voiceClipsLoading;
+    voiceClipsLoading = (async () => {
+        try {
+            initAmbientAudio();
+            if (!window.WORKOUT_VOICE_CLIPS) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'audio-clips.js?cacheBust=' + Date.now();
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('audio-clips.js failed to load'));
+                    document.head.appendChild(script);
+                });
+            }
+            const raw = window.WORKOUT_VOICE_CLIPS || {};
+            const decoded = {};
+            for (const slug in raw) {
+                try { decoded[slug] = await audioCtx.decodeAudioData(base64ToArrayBuffer(raw[slug])); }
+                catch (err) { console.warn('Could not decode voice clip:', slug, err); }
+            }
+            voiceClips = decoded;
+            return voiceClips;
+        } catch (err) {
+            console.warn('Voice clips unavailable, falling back:', err);
+            voiceClips = null;
+            return null;
+        } finally {
+            voiceClipsLoading = null;
+        }
+    })();
+    return voiceClipsLoading;
+}
+
+function stopVoicePlayback() {
+    voicePlayToken++;
+    if (currentVoiceSource) {
+        try { currentVoiceSource.stop(); } catch (err) {}
+        currentVoiceSource = null;
+    }
+    if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch (err) {}
+    }
+}
+
+async function playVoiceClipSequence(slugs, token) {
+    for (const slug of slugs) {
+        if (token !== voicePlayToken) return false;
+        const buf = voiceClips && voiceClips[slug];
+        if (!buf) return false;
+        if (audioCtx && audioCtx.state === 'suspended') {
+            try { await audioCtx.resume(); } catch (err) {}
+        }
+        await new Promise((resolve) => {
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(audioCtx.destination);
+            currentVoiceSource = src;
+            src.onended = () => { if (currentVoiceSource === src) currentVoiceSource = null; resolve(); };
+            try { src.start(); } catch (err) { resolve(); }
+        });
+    }
+    return true;
+}
+
+// Parse a speak() phrase into voice-clip slugs. Returns null when the
+// phrase has no clip version, so the caller can fall back.
+async function speakVoiceClips(text, token) {
+    const clips = await loadVoiceClips();
+    if (!clips) return false;
+    const lower = String(text).trim().toLowerCase();
+    let slugs = null;
+    if (lower.startsWith('starting ')) {
+        const day = lower.split(' ')[1] || '';
+        slugs = ['starting-' + day];
+    } else if (lower.startsWith('get ready for ')) {
+        const slug = exerciseClipSlug(String(text).trim().slice('Get ready for '.length));
+        if (slug) slugs = ['get-ready-for', slug];
+    } else if (lower.startsWith('begin ')) {
+        const slug = exerciseClipSlug(String(text).trim().slice('Begin '.length));
+        if (slug) slugs = ['begin', slug];
+    } else if (lower.startsWith('set ')) {
+        const n = parseInt(lower.split(' ')[1], 10);
+        if (n >= 1 && n <= 3) slugs = ['set-' + n + '-begin'];
+    } else if (lower.startsWith('rest for ')) {
+        const secs = parseInt(lower.replace(/[^0-9]/g, ''), 10);
+        if (secs === 10 || secs === 30 || secs === 60) slugs = ['rest-' + secs];
+    } else if (lower.startsWith('rest. next is ')) {
+        const rest = String(text).trim().slice('Rest. Next is '.length);
+        if (rest.toLowerCase() === 'finish') slugs = ['rest-next-is', 'finish'];
+        else { const slug = exerciseClipSlug(rest); if (slug) slugs = ['rest-next-is', slug]; }
+    } else if (lower.includes('congratulations')) {
+        slugs = ['congrats'];
+    } else if (lower === 'paused') {
+        slugs = ['paused'];
+    } else if (lower === 'resuming') {
+        slugs = ['resuming'];
+    }
+    if (!slugs || slugs.some((s) => !clips[s])) return false;
+    return playVoiceClipSequence(slugs, token);
+}
+
+function speakSystemVoice(text) {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return false;
+    try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(String(text));
+        u.rate = 1;
+        window.speechSynthesis.speak(u);
+        return true;
+    } catch (err) {
+        console.warn('System voice failed:', err);
+        return false;
+    }
+}
+
+// Tones: the original chime mapping, used in Tones mode and as fallback.
+function speakTones(text) {
+    const strText = String(text).trim().toLowerCase();
     if (strText.includes('congratulations') || strText.includes('complete')) {
         playFinishFanfare();
     } else if (strText.includes('begin') || strText.includes('set') || strText.includes('starting') || strText.includes('resuming')) {
@@ -646,6 +821,56 @@ function speak(text) {
     } else {
         playCadenceBeep();
     }
+}
+
+function speak(text) {
+    if (audioMode === 'silent') return;
+    if (text === null || text === undefined) return;
+    const strText = String(text).trim();
+    if (strText === '') return;
+    setTransientSession();
+    // Rep counts and 3-2-1 countdowns: always a beep, even in Voice mode.
+    // Speaking every rep would talk over the movie constantly.
+    if (!isNaN(strText.toLowerCase())) {
+        playCadenceBeep();
+        return;
+    }
+    if (audioMode === 'voice') {
+        voicePlayToken++;
+        const token = voicePlayToken;
+        speakVoiceClips(strText, token).then((handled) => {
+            if (!handled && token === voicePlayToken) {
+                if (!speakSystemVoice(strText)) speakTones(strText);
+            }
+        });
+        return;
+    }
+    speakTones(strText);
+}
+
+async function testAudio() {
+    const status = document.getElementById('audio-test-status');
+    initAmbientAudio();
+    setTransientSession();
+    if (audioMode === 'silent') {
+        if (status) status.innerText = 'Movie mode is on: no sound, visual prompts only.';
+        return;
+    }
+    if (status) status.innerText = 'Playing sample... did your movie keep playing?';
+    if (audioMode === 'voice') {
+        voicePlayToken++;
+        const token = voicePlayToken;
+        const handled = await speakVoiceClips('Get ready for Goblet Squat', token);
+        if (handled && token === voicePlayToken) await speakVoiceClips('Begin Goblet Squat', token);
+        if (!handled) {
+            if (status) status.innerText = 'Voice clips did not load — try Tones, or reload the page.';
+            return;
+        }
+    } else {
+        playWorkChime();
+        setTimeout(() => playCadenceBeep(), 400);
+    }
+    if (status) status.innerText = 'Sample played. If the movie kept playing, Voice mode works for you.';
 }
 
 async function requestWakeLock() {
@@ -737,6 +962,7 @@ function showScreen(screenId) {
 
 function startWorkout() {
     initAmbientAudio();
+    if (audioMode === 'voice') loadVoiceClips();
 
     const csvContent = document.getElementById('csv-input').value;
     const selectedDay = document.getElementById('day-select').value;
@@ -775,6 +1001,7 @@ function startWorkout() {
 }
 
 function exitWorkout() {
+    stopVoicePlayback();
     clearInterval(timer);
     clearInterval(workoutTimer);
     clearInterval(audioKeepAliveTimer);
@@ -1041,6 +1268,7 @@ function advanceAfterWorkPhase() {
 }
 
 function nextStep() {
+    stopVoicePlayback();
     if (currentPhase === 'WORK') {
         advanceAfterWorkPhase();
     } else if (currentPhase === 'REST_SET') {
@@ -1056,6 +1284,7 @@ function nextStep() {
 }
 
 function previousStep() {
+    stopVoicePlayback();
     if (currentPhase === 'REST_SET' || currentPhase === 'WORK') {
         setupPhase('PREP');
     } else if (currentExIndex > 0) {
@@ -1105,6 +1334,7 @@ function updateOverallProgress() {
 }
 
 function finishWorkout() {
+    stopVoicePlayback();
     clearInterval(timer);
     clearInterval(workoutTimer);
     clearInterval(audioKeepAliveTimer);
