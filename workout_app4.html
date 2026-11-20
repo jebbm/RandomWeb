@@ -336,6 +336,13 @@
         </div>
 
         <div class="control-group">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color: var(--text-main); font-size: 1rem;">
+                <input type="checkbox" id="movie-mode" style="width:20px; height:20px; accent-color:#10b981;">
+                Movie mode &mdash; visual prompts only, won't pause a movie
+            </label>
+        </div>
+
+        <div class="control-group">
             <label for="csv-input">Routine CSV:</label>
             <textarea id="csv-input"></textarea>
             <div id="status-msg" class="status-msg">Loading CSV from server...</div>
@@ -453,6 +460,10 @@ let workoutTimer = null;
 let wakeLock = null;
 let lastSpokenSecond = -1;
 let audioCtx = null;
+let lastTickTime = 0;
+let audioKeepAliveTimer = null;
+let movieMode = false;
+try { movieMode = localStorage.getItem('workoutMovieMode') === '1'; } catch (err) {}
 
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const todayName = daysOfWeek[new Date().getDay()];
@@ -460,6 +471,14 @@ document.getElementById('day-select').value = todayName;
 
 window.addEventListener('DOMContentLoaded', () => {
     reloadHostedCSV();
+    const mm = document.getElementById('movie-mode');
+    if (mm) {
+        mm.checked = movieMode;
+        mm.addEventListener('change', () => {
+            movieMode = mm.checked;
+            try { localStorage.setItem('workoutMovieMode', movieMode ? '1' : '0'); } catch (err) {}
+        });
+    }
 });
 
 async function reloadHostedCSV() {
@@ -483,15 +502,25 @@ async function reloadHostedCSV() {
     }
 }
 
-// Web Audio API & AudioSession Setup for visionOS ambient playback
-function initAmbientAudio() {
+// Web Audio API & AudioSession Setup for visionOS.
+// Short workout beeps are transient notification audio, NOT continuous
+// playback: 'transient' plays over a movie instead of pausing it,
+// while 'playback' pauses other audio and 'ambient' is for continuous
+// mixable music. visionOS 27 enforces that distinction, so set it
+// before every beep, not just once at startup - the movie app taking
+// focus can reset the session in between.
+function setTransientSession() {
     if ('audioSession' in navigator) {
         try {
-            navigator.audioSession.type = 'ambient';
+            navigator.audioSession.type = 'transient';
         } catch (err) {
             console.warn('Unable to set audioSession type:', err);
         }
     }
+}
+
+function initAmbientAudio() {
+    setTransientSession();
 
     if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -597,6 +626,9 @@ function playFinishFanfare() {
 
 // Completely replaces TTS speech with Web Audio chimes
 function speak(text) {
+    // Movie mode: visual prompts only, guaranteed not to pause a movie.
+    if (movieMode) return;
+    setTransientSession();
     if (text === null || text === undefined) return;
     const strText = String(text).trim().toLowerCase();
 
@@ -632,6 +664,32 @@ function releaseWakeLock() {
         wakeLock = null;
     }
 }
+
+// Fix for audio stopping when switching apps: iOS Safari suspends the
+// AudioContext and releases the Wake Lock when the page is hidden, and
+// neither was ever re-acquired. Resume both when the page becomes
+// visible again, so prompts come back without reloading.
+async function resumeAudioOnReturn() {
+    if (document.visibilityState !== 'visible') return;
+    setTransientSession();
+    if (audioCtx && audioCtx.state === 'suspended') {
+        try { await audioCtx.resume(); } catch (err) { console.log('Audio resume error:', err); }
+    }
+    lastTickTime = Date.now();
+    if (wakeLock === null) {
+        requestWakeLock();
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        resumeAudioOnReturn();
+        // Audible confirmation that audio is back, only mid-workout.
+        const ws = document.getElementById('workout-screen');
+        if (ws && ws.classList.contains('active')) playCadenceBeep();
+    }
+});
+window.addEventListener('pageshow', () => { resumeAudioOnReturn(); });
 
 function parseCSV(text, selectedDay) {
     const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -697,6 +755,14 @@ function startWorkout() {
 
     speak(`Starting ${selectedDay} workout. Get ready.`);
     requestWakeLock();
+    // Keep audio alive while visible: re-resume a suspended context and
+    // re-request a released wake lock every 5s.
+    clearInterval(audioKeepAliveTimer);
+    audioKeepAliveTimer = setInterval(() => {
+        if (document.hidden) return;
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if (wakeLock === null) requestWakeLock();
+    }, 5000);
 
     showScreen('workout-screen');
 
@@ -711,6 +777,7 @@ function startWorkout() {
 function exitWorkout() {
     clearInterval(timer);
     clearInterval(workoutTimer);
+    clearInterval(audioKeepAliveTimer);
     releaseWakeLock();
     showSetup();
 }
@@ -901,14 +968,25 @@ function runTimerLogic() {
     const ex = workoutData[currentExIndex];
     const TICK_MS = 100;
 
+    // Wall-clock timing: setInterval is throttled/paused in background tabs
+    // on iOS, so counting fixed 0.1s ticks stalls the timer. Measure real
+    // elapsed time instead, so it catches up correctly on return.
+    // dt is capped at 5s so a long absence jumps at most one phase.
+    lastTickTime = Date.now();
     timer = setInterval(() => {
-        if (isPaused) return;
+        if (isPaused) { lastTickTime = Date.now(); return; }
+
+        const now = Date.now();
+        let dt = (now - lastTickTime) / 1000;
+        lastTickTime = now;
+        if (!(dt > 0)) dt = TICK_MS / 1000;
+        if (dt > 5) dt = 5;
 
         updateTimeRemainingDisplay();
 
         if (currentPhase === 'WORK' && ex.type === 'reps') {
             const cadence = ex.rep_cadence > 0 ? ex.rep_cadence : 3;
-            cadenceTimerCount += (TICK_MS / 1000);
+            cadenceTimerCount += dt;
 
             if (cadenceTimerCount >= cadence) {
                 cadenceTimerCount -= cadence;
@@ -924,7 +1002,7 @@ function runTimerLogic() {
         }
 
         if (secondsLeft > 0) {
-            secondsLeft -= (TICK_MS / 1000);
+            secondsLeft -= dt;
             renderDisplay();
 
             const wholeSec = Math.ceil(secondsLeft);
@@ -1029,6 +1107,7 @@ function updateOverallProgress() {
 function finishWorkout() {
     clearInterval(timer);
     clearInterval(workoutTimer);
+    clearInterval(audioKeepAliveTimer);
     releaseWakeLock();
 
     let totalSets = 0;
