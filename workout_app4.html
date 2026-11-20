@@ -650,7 +650,9 @@ function playFinishFanfare() {
 // one the beeps already use, so it can play over a movie. Clips live in
 // audio-clips.js (base64 MP3s, loaded lazily on first Voice use).
 const EXERCISE_CLIP_SLUGS = {
-    "PT Stretch and Glide": "stretch-glide",
+    "Upper Trapezius Stretch": "upper-trapezius-stretch",
+    "Sleeper Stretch": "sleeper-stretch",
+    "Ulnar Nerve Glide": "ulnar-nerve-glide",
     "Shoulder External Rotation - Band": "external-rotation",
     "Goblet Squat": "goblet-squat",
     "Dumbbell Bench Press (floor)": "bench-press",
@@ -1041,13 +1043,22 @@ function setupPhase(phase) {
     const ex = workoutData[currentExIndex];
     lastSpokenSecond = -1;
 
-    document.getElementById('exercise-title').innerText = ex.name;
-    document.getElementById('sets-info').innerText = `Set ${currentSetIndex} of ${ex.sets}`;
+    // During the rest between exercises, show the NEXT exercise (picture,
+    // name and notes/weights) so the user can gather what it needs while
+    // resting, instead of the exercise just finished. All other phases
+    // show the current exercise.
+    const nextEx = workoutData[currentExIndex + 1];
+    const showNext = phase === 'REST_EX' && !!nextEx;
+    const displayEx = showNext ? nextEx : ex;
+    const displaySet = showNext ? 1 : currentSetIndex;
+
+    document.getElementById('exercise-title').innerText = displayEx.name;
+    document.getElementById('sets-info').innerText = `Set ${displaySet} of ${displayEx.sets}`;
 
     const notesBox = document.getElementById('notes-box');
     const notesText = document.getElementById('notes-text');
-    if (ex.notes && ex.notes.trim() !== '') {
-        notesText.innerText = ex.notes;
+    if (displayEx.notes && displayEx.notes.trim() !== '') {
+        notesText.innerText = displayEx.notes;
         notesBox.style.display = 'flex';
     } else {
         notesBox.style.display = 'none';
@@ -1055,14 +1066,14 @@ function setupPhase(phase) {
 
     const imgElem = document.getElementById('exercise-img');
     const placeholder = document.getElementById('image-placeholder');
-    if (ex.image_url) {
-        imgElem.src = ex.image_url;
+    if (displayEx.image_url) {
+        imgElem.src = displayEx.image_url;
         imgElem.style.display = 'block';
         placeholder.style.display = 'none';
     } else {
         imgElem.style.display = 'none';
         placeholder.style.display = 'block';
-        placeholder.innerText = ex.name;
+        placeholder.innerText = displayEx.name;
     }
 
     const badge = document.getElementById('phase-badge');
@@ -1101,7 +1112,6 @@ function setupPhase(phase) {
         badge.style.background = "var(--accent-finish)";
         secondsLeft = ex.rest_after_exercise;
         subDisplay.innerText = "seconds rest before next exercise";
-        const nextEx = workoutData[currentExIndex + 1];
         speak(`Rest. Next is ${nextEx ? nextEx.name : 'Finish'}`);
         updateNextPreview(nextEx ? `Up Next: ${nextEx.name}` : "Up Next: Workout Complete");
     }

@@ -1,25 +1,31 @@
 day,name,type,target,sets,prep_time,rest_between_sets,rest_after_exercise,rep_cadence,notes,image_url
-Monday,PT Stretch and Glide,time,180,1,10,0,10,3,PT daily: trap stretch 30s each side - sleeper 30-60s each side - 10 nerve glides each arm - slow pain-free,
-Monday,Shoulder External Rotation - Band,reps,10,2,20,30,10,3,PT: light band - elbow at side - slow - stop if sharp pain,
+Monday,Upper Trapezius Stretch,time,60,1,10,0,10,3,PT daily: hold 30s each side - slow pain-free,https://badankhooba.com/wp-content/uploads/2024/10/Static-Upper-Trapezius-Stretch-500x333.webp
+Monday,Sleeper Stretch,time,60,1,10,0,10,3,PT daily: hold 30s each side - slow pain-free,https://www.resilienceorthopedics.com/wp-content/uploads/2025/05/sleeper-stretch.jpg
+Monday,Ulnar Nerve Glide,time,60,1,10,0,10,3,PT daily: 10 glides each arm - slow pain-free,https://cdn.triathlete.com/wp-content/uploads/2025/07/Ulnar-nerve-glide.jpg?width=730
+Monday,Shoulder External Rotation - Band,reps,10,2,20,30,10,3,PT: light band - elbow at side - slow - stop if sharp pain,https://images.matchusports.nl/2019/04/external-rotation-1.jpg
 Monday,Goblet Squat,reps,12,3,60,60,10,2.5,20-30 lbs (single DB),https://www.mensfitness.com/.image/MTk2MTM2OTI4NTIzOTIwOTAx/goblet-squat-main.jpg?profile=w828&x=50&y=50
 Monday,Dumbbell Bench Press (floor),reps,12,3,60,60,10,2.5,15-25 lbs each - use low end if shoulder sore,images/Picture1.png
 Monday,Single-Arm Dumbbell Rows,reps,24,3,60,30,10,2.5,20-30 lbs (change arms at 12),images/Picture7.jpg
 Monday,Dumbbell Romanian Deadlift,reps,12,3,60,60,10,2.5,15-25 lbs each,https://eatthis.com/wp-content/uploads/sites/4/2021/04/Dumbbell-Romanian-Deadlift.jpg
-Monday,Standing Shoulder Flexion to 90 Degrees - Light DB,reps,10,2,20,30,10,3,PT: 5-10 lbs each - stop at 90 degrees - no overhead,
-Wednesday,PT Stretch and Glide,time,180,1,10,0,10,3,PT daily: trap stretch 30s each side - sleeper 30-60s each side - 10 nerve glides each arm - slow pain-free,
-Wednesday,Standing Shoulder Abduction Slides at Wall,reps,12,2,20,30,10,3,PT: slow wall slides - pain-free range only,
+Monday,Standing Shoulder Flexion to 90 Degrees - Light DB,reps,10,2,20,30,10,3,PT: 5-10 lbs each - stop at 90 degrees - no overhead,https://legionathletics.com/wp-content/uploads/2023/06/lifts.jpg
+Wednesday,Upper Trapezius Stretch,time,60,1,10,0,10,3,PT daily: hold 30s each side - slow pain-free,https://badankhooba.com/wp-content/uploads/2024/10/Static-Upper-Trapezius-Stretch-500x333.webp
+Wednesday,Sleeper Stretch,time,60,1,10,0,10,3,PT daily: hold 30s each side - slow pain-free,https://www.resilienceorthopedics.com/wp-content/uploads/2025/05/sleeper-stretch.jpg
+Wednesday,Ulnar Nerve Glide,time,60,1,10,0,10,3,PT daily: 10 glides each arm - slow pain-free,https://cdn.triathlete.com/wp-content/uploads/2025/07/Ulnar-nerve-glide.jpg?width=730
+Wednesday,Standing Shoulder Abduction Slides at Wall,reps,12,2,20,30,10,3,PT: slow wall slides - pain-free range only,https://bonearc.com/exercise-library/wall-slide-with-lift-off.jpg
 Wednesday,Dumbbell Reverse Lunge,reps,24,3,60,30,10,2.5,10-20 lbs each,https://cdn.shopify.com/s/files/1/2267/4585/files/Reverse_Lunges_1024x1024.jpg?v=1531293276
 Wednesday,Dumbbell Flyes (floor),reps,12,3,60,60,10,2.5,10-15 lbs each - use low end if shoulder sore,images/Picture2.jpg
 Wednesday,Bent-Over Dumbbell Rows,reps,12,3,60,60,10,2.5,20-30 lbs each,images/Picture8.jpg
 Wednesday,Standing Dumbbell Calf Raises,reps,15,3,60,60,10,2.5,15-25 lbs each,https://fitnessvolt.com/wp-content/uploads/2021/02/dumbbell-standing-calf-raise-750x536.jpg
-Wednesday,Shoulder Internal Rotation - Band,reps,10,2,20,30,10,3,PT: light band - elbow at side - slow - stop if sharp pain,
-Friday,PT Stretch and Glide,time,180,1,10,0,10,3,PT daily: trap stretch 30s each side - sleeper 30-60s each side - 10 nerve glides each arm - slow pain-free,
-Friday,Prone Single-Arm Shoulder Y,reps,8,2,20,30,10,3,PT: no weight or 2-3 lbs max - slow - pain-free,
+Wednesday,Shoulder Internal Rotation - Band,reps,10,2,20,30,10,3,PT: light band - elbow at side - slow - stop if sharp pain,https://bloganchoi.com/wp-content/uploads/2020/04/internal-rotation-side.jpg
+Friday,Upper Trapezius Stretch,time,60,1,10,0,10,3,PT daily: hold 30s each side - slow pain-free,https://badankhooba.com/wp-content/uploads/2024/10/Static-Upper-Trapezius-Stretch-500x333.webp
+Friday,Sleeper Stretch,time,60,1,10,0,10,3,PT daily: hold 30s each side - slow pain-free,https://www.resilienceorthopedics.com/wp-content/uploads/2025/05/sleeper-stretch.jpg
+Friday,Ulnar Nerve Glide,time,60,1,10,0,10,3,PT daily: 10 glides each arm - slow pain-free,https://cdn.triathlete.com/wp-content/uploads/2025/07/Ulnar-nerve-glide.jpg?width=730
+Friday,Prone Single-Arm Shoulder Y,reps,8,2,20,30,10,3,PT: no weight or 2-3 lbs max - slow - pain-free,https://orthowiki.cqupperlimb.com.au/assets/anatomy/rehab--prone-y.kieran-cc-by-nc-4.0.png
 Friday,Dumbbell Sumo Squat,reps,12,3,60,60,10,2.5,20-30 lbs (single DB),https://cdn.oxygenmag.com/wp-content/uploads/2020/04/dumbbell-sumo-suqat.jpg?width=3840&auto=webp&quality=75&fit=cover
 Friday,Close-Grip Dumbbell Press,reps,12,3,60,60,10,2.5,15-25 lbs each - use low end if shoulder sore,images/Picture6.jpg
 Friday,Reverse Flyes,reps,15,3,60,60,10,2.5,5-10 lbs each - light and slow,images/Picture9.jpg
 Friday,Single-Leg Romanian Deadlift,reps,24,3,60,30,10,2.5,5-15 lbs each alternate legs,https://www.nuffieldhealth.com/local/f2/ef/43ebcdbd4ca4bfbd97211c55fd2f/single-leg-deadlift.jpg
-Friday,Standing Shoulder Shrugs - Light DB,reps,10,2,20,30,10,3,PT: 10-15 lbs each - slow shrug - no overhead,
+Friday,Standing Shoulder Shrugs - Light DB,reps,10,2,20,30,10,3,PT: 10-15 lbs each - slow shrug - no overhead,https://bod-blog-assets.prod.cd.beachbodyondemand.com/bod-blog/wp-content/uploads/2017/05/10124723/trap-exercises-600-shrugs.jpg
 Tuesday;Thursday;Saturday,Cycle Warm-up,reps,30,1,0,0,210,1.2,Warm-up flat 50 RPM,
 Tuesday;Thursday;Saturday,Cycle Climb 1,reps,30,1,0,0,300,1,Grade 4% 60 RPM,
 Tuesday;Thursday;Saturday,Cycle Tempo,reps,30,1,0,0,300,0.857,Flat 70 RPM,
